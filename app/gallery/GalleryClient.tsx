@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 
@@ -19,14 +19,26 @@ const CATEGORY_LABELS: Record<string, string> = {
   other: 'Other',
 }
 
-export default function GalleryClient({ photos }: { photos: Photo[] }) {
+const CATEGORIES = Object.entries(CATEGORY_LABELS)
+
+export default function GalleryClient({ photos: initialPhotos, isAdmin }: { photos: Photo[]; isAdmin: boolean }) {
   const router = useRouter()
+  const [photos, setPhotos] = useState<Photo[]>(initialPhotos)
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
-  const [inquiryPhoto, setInquiryPhoto] = useState<Photo | null>(null)
   const [expanded, setExpanded] = useState<Photo | null>(null)
+  const [inquiryPhoto, setInquiryPhoto] = useState<Photo | null>(null)
   const [inquiryText, setInquiryText] = useState('')
 
-  // Build unique categories present in photos
+  // Admin upload state
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [uploading, setUploading] = useState(false)
+  const [uploadCaption, setUploadCaption] = useState('')
+  const [uploadCategory, setUploadCategory] = useState('')
+  const [showUploadForm, setShowUploadForm] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
   const presentCategories = Array.from(
     new Set(photos.map(p => p.category).filter(Boolean) as string[])
   )
@@ -44,16 +56,86 @@ export default function GalleryClient({ photos }: { photos: Photo[] }) {
 
   function startOrder() {
     if (!inquiryPhoto) return
-    const desc = encodeURIComponent(inquiryText.trim())
-    router.push(`/orders/new?type=scratch&description=${desc}`)
+    router.push(`/orders/new?type=scratch&description=${encodeURIComponent(inquiryText.trim())}`)
+  }
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setSelectedFile(file)
+    setPreviewUrl(URL.createObjectURL(file))
+    setShowUploadForm(true)
+  }
+
+  async function handleUpload() {
+    if (!selectedFile) return
+    setUploading(true)
+    try {
+      const formData = new FormData()
+      formData.append('file', selectedFile)
+      if (uploadCaption.trim()) formData.append('caption', uploadCaption.trim())
+      if (uploadCategory) formData.append('category', uploadCategory)
+
+      const res = await fetch('/api/gallery', { method: 'POST', body: formData })
+      if (!res.ok) throw new Error('Upload failed')
+      const newPhoto = await res.json()
+      setPhotos(prev => [newPhoto, ...prev])
+      setShowUploadForm(false)
+      setSelectedFile(null)
+      setPreviewUrl(null)
+      setUploadCaption('')
+      setUploadCategory('')
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    } catch {
+      alert('Upload failed. Please try again.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  async function handleDelete(id: string) {
+    if (!confirm('Remove this photo from the gallery?')) return
+    setDeletingId(id)
+    try {
+      const res = await fetch('/api/gallery', { method: 'DELETE', body: JSON.stringify({ id }), headers: { 'Content-Type': 'application/json' } })
+      if (!res.ok) throw new Error('Delete failed')
+      setPhotos(prev => prev.filter(p => p.id !== id))
+      if (expanded?.id === id) setExpanded(null)
+    } catch {
+      alert('Failed to delete. Please try again.')
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
-      <div className="mb-10">
-        <p className="text-xs font-semibold tracking-widest text-zinc-500 uppercase mb-2">Our Work</p>
-        <h1 className="text-3xl font-bold text-white">Gallery</h1>
-        <p className="text-zinc-400 mt-2">A showcase of prints we've made for our customers.</p>
+      <div className="mb-10 flex items-end justify-between">
+        <div>
+          <p className="text-xs font-semibold tracking-widest text-zinc-500 uppercase mb-2">Our Work</p>
+          <h1 className="text-3xl font-bold text-white">Gallery</h1>
+          <p className="text-zinc-400 mt-2">A showcase of prints we've made for our customers.</p>
+        </div>
+        {isAdmin && (
+          <div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={handleFileSelect}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="btn-primary flex items-center gap-2"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Add Photo
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Category filters */}
@@ -93,7 +175,9 @@ export default function GalleryClient({ photos }: { photos: Photo[] }) {
             </svg>
           </div>
           <p className="text-zinc-400 font-medium mb-1">Gallery coming soon</p>
-          <p className="text-zinc-600 text-sm">We're just getting started — check back soon to see our work.</p>
+          <p className="text-zinc-600 text-sm">
+            {isAdmin ? 'Click "Add Photo" to upload your first gallery image.' : 'We\'re just getting started — check back soon to see our work.'}
+          </p>
         </div>
       ) : (
         <div className="columns-2 sm:columns-3 lg:columns-4 gap-3 space-y-3">
@@ -104,17 +188,31 @@ export default function GalleryClient({ photos }: { photos: Photo[] }) {
                 src={photo.url}
                 alt={photo.caption ?? '3D print'}
                 className="w-full object-cover cursor-zoom-in group-hover:brightness-75 transition-all duration-200"
-                onClick={() => setExpanded(photo)}
+                onClick={() => !isAdmin && setExpanded(photo)}
               />
-              {/* Hover overlay */}
-              <div className="absolute inset-0 flex flex-col items-center justify-end p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                <button
-                  className="pointer-events-auto w-full text-xs font-semibold bg-white text-black rounded-lg py-2 hover:bg-zinc-200 transition-colors"
-                  onClick={(e) => { e.stopPropagation(); openInquiry(photo) }}
-                >
-                  I want this
-                </button>
-              </div>
+
+              {/* Admin overlay */}
+              {isAdmin ? (
+                <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    onClick={() => handleDelete(photo.id)}
+                    disabled={deletingId === photo.id}
+                    className="pointer-events-auto bg-red-600 hover:bg-red-500 text-white text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {deletingId === photo.id ? 'Removing…' : 'Remove'}
+                  </button>
+                </div>
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-end p-3 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                  <button
+                    className="pointer-events-auto w-full text-xs font-semibold bg-white text-black rounded-lg py-2 hover:bg-zinc-200 transition-colors"
+                    onClick={(e) => { e.stopPropagation(); openInquiry(photo) }}
+                  >
+                    I want this
+                  </button>
+                </div>
+              )}
+
               {/* Category badge */}
               {photo.category && (
                 <div className="absolute top-2 left-2 pointer-events-none">
@@ -123,23 +221,70 @@ export default function GalleryClient({ photos }: { photos: Photo[] }) {
                   </span>
                 </div>
               )}
+              {photo.caption && (
+                <div className="px-2 py-1.5">
+                  <p className="text-xs text-zinc-400 truncate">{photo.caption}</p>
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
 
-      <div className="card p-8 text-center mt-12">
-        <h2 className="text-xl font-bold text-white mb-2">Want something like this?</h2>
-        <p className="text-zinc-400 text-sm mb-5">Submit a custom order and we'll bring your idea to life.</p>
-        <Link href="/orders/new" className="btn-primary">Start Custom Order</Link>
-      </div>
+      {/* CTA for non-admin users */}
+      {!isAdmin && (
+        <div className="card p-8 text-center mt-12">
+          <h2 className="text-xl font-bold text-white mb-2">Want something like this?</h2>
+          <p className="text-zinc-400 text-sm mb-5">Submit a custom order and we'll bring your idea to life.</p>
+          <Link href="/orders/new" className="btn-primary">Start Custom Order</Link>
+        </div>
+      )}
 
-      {/* Lightbox */}
-      {expanded && !inquiryPhoto && (
-        <div
-          className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-4"
-          onClick={() => setExpanded(null)}
-        >
+      {/* Upload form modal */}
+      {showUploadForm && previewUrl && (
+        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => { setShowUploadForm(false); setSelectedFile(null); setPreviewUrl(null) }}>
+          <div className="card p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
+            <h2 className="text-white font-semibold text-base">Add to Gallery</h2>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={previewUrl} alt="Preview" className="w-full max-h-48 object-contain rounded-lg border border-zinc-700 bg-zinc-950" />
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">Caption <span className="text-zinc-500">(optional)</span></label>
+              <input
+                type="text"
+                value={uploadCaption}
+                onChange={e => setUploadCaption(e.target.value)}
+                className="input w-full"
+                placeholder="e.g. Custom phone stand in galaxy blue"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-300 mb-1">Category <span className="text-zinc-500">(optional)</span></label>
+              <select
+                value={uploadCategory}
+                onChange={e => setUploadCategory(e.target.value)}
+                className="input w-full"
+              >
+                <option value="">None</option>
+                {CATEGORIES.map(([val, label]) => (
+                  <option key={val} value={val}>{label}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-3">
+              <button onClick={() => { setShowUploadForm(false); setSelectedFile(null); setPreviewUrl(null) }} className="btn-secondary flex-1">
+                Cancel
+              </button>
+              <button onClick={handleUpload} disabled={uploading} className="btn-primary flex-1">
+                {uploading ? 'Uploading…' : 'Upload'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Lightbox (non-admin) */}
+      {!isAdmin && expanded && !inquiryPhoto && (
+        <div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-4" onClick={() => setExpanded(null)}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={expanded.url} alt={expanded.caption ?? '3D print'} className="max-w-full max-h-[80vh] object-contain rounded-lg" />
           {(expanded.caption || expanded.category) && (
@@ -158,8 +303,8 @@ export default function GalleryClient({ photos }: { photos: Photo[] }) {
         </div>
       )}
 
-      {/* Inquiry modal */}
-      {inquiryPhoto && (
+      {/* Inquiry modal (non-admin) */}
+      {!isAdmin && inquiryPhoto && (
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setInquiryPhoto(null)}>
           <div className="card p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-start gap-4">
@@ -182,9 +327,7 @@ export default function GalleryClient({ photos }: { photos: Photo[] }) {
             </div>
             <div className="flex gap-3">
               <button onClick={() => setInquiryPhoto(null)} className="btn-secondary flex-1">Cancel</button>
-              <button onClick={startOrder} disabled={!inquiryText.trim()} className="btn-primary flex-1">
-                Start Order
-              </button>
+              <button onClick={startOrder} disabled={!inquiryText.trim()} className="btn-primary flex-1">Start Order</button>
             </div>
           </div>
         </div>

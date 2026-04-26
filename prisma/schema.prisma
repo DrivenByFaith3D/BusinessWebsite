@@ -168,6 +168,14 @@ model Review {
   @@unique([productId, userId])
 }
 
+model GalleryPhoto {
+  id        String   @id @default(cuid())
+  url       String
+  caption   String?
+  category  String?
+  createdAt DateTime @default(now())
+}
+
 model Coupon {
   id            String    @id @default(cuid())
   code          String    @unique
