@@ -9,7 +9,7 @@ export default async function Navbar() {
   const isAdmin = session?.user?.role === 'admin'
 
   const navLinks = [
-    { label: 'Listings', href: '/listings' },
+    ...(!isAdmin ? [{ label: 'Listings', href: '/listings' }] : []),
     { label: 'Gallery', href: '/gallery' },
     ...(!isAdmin && session ? [{ label: 'My Orders', href: '/orders' }] : []),
     ...(!isAdmin ? [{ label: 'About', href: '/about' }, { label: 'FAQ', href: '/faq' }] : []),
