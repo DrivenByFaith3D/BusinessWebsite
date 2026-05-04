@@ -7,8 +7,12 @@ out/
 
 # env files
 .env
+.env.*
 .env.local
 .env.*.local
+
+# secret files
+tmp:new-keys.txt.rtf
 
 # misc
 .DS_Store
