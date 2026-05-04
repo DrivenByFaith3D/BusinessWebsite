@@ -9,18 +9,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        brand: {
-          50: '#f5f5f5',
-          100: '#e8e8e8',
-          200: '#d1d1d1',
-          300: '#a8a8a8',
-          400: '#737373',
-          500: '#525252',
-          600: '#333333',
-          700: '#1a1a1a',
-          800: '#111111',
-          900: '#000000',
-        },
+        cream: '#FAF9F7',
+        taupe: '#D6D0C8',
+        'taupe-dark': '#B8B0A6',
+        charcoal: '#2C2C2C',
+        'warm-gray': '#8A8578',
+      },
+      fontFamily: {
+        serif: ['Georgia', 'Times New Roman', 'serif'],
+        display: ['Georgia', 'Times New Roman', 'serif'],
+        sans: ['system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
     },
   },

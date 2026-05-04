@@ -4,19 +4,26 @@
 
 @layer base {
   body {
-    @apply bg-zinc-900 text-white antialiased;
+    @apply bg-cream text-charcoal antialiased font-sans;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display;
   }
 }
 
 @layer components {
   .btn-primary {
-    @apply bg-white hover:bg-zinc-100 text-black font-semibold px-4 py-2 rounded-lg transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-[0_0_20px_rgba(255,255,255,0.15)] hover:shadow-[0_0_28px_rgba(255,255,255,0.25)] active:scale-[0.98];
+    @apply bg-charcoal hover:bg-black text-white font-medium px-6 py-2.5 rounded-full transition-all duration-200 disabled:opacity-40 disabled:cursor-not-allowed active:scale-[0.98];
   }
   .btn-secondary {
-    @apply bg-transparent hover:bg-white/10 text-white font-medium px-4 py-2 rounded-lg border border-white/20 hover:border-white/40 transition-all duration-200 active:scale-[0.98];
+    @apply bg-transparent hover:bg-charcoal/5 text-charcoal font-medium px-6 py-2.5 rounded-full border border-charcoal/30 hover:border-charcoal/60 transition-all duration-200 active:scale-[0.98];
   }
   .input {
-    @apply w-full bg-zinc-900 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-zinc-500 transition-all duration-200;
+    @apply w-full bg-white border border-taupe rounded-full px-5 py-3 text-sm text-charcoal placeholder-warm-gray focus:outline-none focus:ring-2 focus:ring-charcoal/20 focus:border-charcoal/40 transition-all duration-200;
+  }
+  .input-textarea {
+    @apply w-full bg-white border border-taupe rounded-2xl px-5 py-3 text-sm text-charcoal placeholder-warm-gray focus:outline-none focus:ring-2 focus:ring-charcoal/20 focus:border-charcoal/40 transition-all duration-200 resize-none;
   }
   .input[type=number],
   input[type=number] {
@@ -30,6 +37,6 @@
     margin: 0;
   }
   .card {
-    @apply bg-zinc-800/80 rounded-xl border border-zinc-700 backdrop-blur-sm;
+    @apply bg-white rounded-xl border border-taupe/50 shadow-sm;
   }
 }
