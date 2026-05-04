@@ -5,7 +5,7 @@ import ContactForm from './ContactForm'
 export default function ServicesStorePage() {
   return (
     <div>
-      {/* Section 1 ��� Hero Banner */}
+      {/* Section 1 — Hero Banner */}
       <section className="w-full h-[50vh] min-h-[400px] relative bg-taupe/30">
         <Image
           src="/hero-living-room.jpg"
@@ -17,7 +17,7 @@ export default function ServicesStorePage() {
         />
       </section>
 
-      {/* Section 2 ��� Services Intro */}
+      {/* Section 2 — Services Intro */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-start">
           <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display leading-tight">
@@ -45,12 +45,11 @@ export default function ServicesStorePage() {
               />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+              <div className="mb-3">
                 <h3 className="text-2xl sm:text-3xl font-display">Shop Collection</h3>
-                <span className="text-xl font-display text-charcoal shrink-0">$12/hr</span>
               </div>
               <p className="text-charcoal/70 text-base leading-relaxed mb-5">
-                Browse our ready-made desk organizer designs. Pick a style, choose your color, and we print it for you. Simple, fast, and affordable — perfect if you already know what you want.
+                Browse our ready-made desk organizer designs. Pick a style, choose your color, and we print it for you. Each product is individually priced — simple, fast, and affordable.
               </p>
               <Link href="/listings" className="btn-primary inline-block text-sm">
                 Browse the Shop
@@ -58,12 +57,12 @@ export default function ServicesStorePage() {
             </div>
           </div>
 
-          {/* Service 2: Custom Print */}
+          {/* Service 2: Customize Our Prints */}
           <div className="flex flex-col sm:flex-row items-start gap-6 sm:gap-8">
             <div className="w-[150px] h-[150px] shrink-0 rounded-lg overflow-hidden bg-taupe/20 relative">
               <Image
-                src="/services/custom-print.jpg"
-                alt="Custom Print"
+                src="/services/customize-prints.jpg"
+                alt="Customize Our Prints"
                 fill
                 className="object-cover"
                 unoptimized
@@ -71,24 +70,24 @@ export default function ServicesStorePage() {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-                <h3 className="text-2xl sm:text-3xl font-display">Custom Print</h3>
-                <span className="text-xl font-display text-charcoal shrink-0">$15/hr</span>
+                <h3 className="text-2xl sm:text-3xl font-display">Customize Our Prints</h3>
+                <span className="text-xl font-display text-charcoal shrink-0">$7/print hr</span>
               </div>
               <p className="text-charcoal/70 text-base leading-relaxed mb-5">
-                Have a file or an idea? Send it over and we&apos;ll bring it to life. Upload your STL, share a reference image, or describe what you need — we handle the rest with precision and care.
+                Love one of our existing designs but want it tweaked? Change the size, color, material, or add personal touches. Pick a base design from our shop, then tell us how to make it yours.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link href="https://calendar.google.com" target="_blank" className="btn-primary inline-block text-sm">
                   Book a Free Consultation
                 </Link>
-                <Link href="#contact" className="btn-secondary inline-block text-sm">
+                <Link href="/orders/new?service=customize" className="btn-secondary inline-block text-sm">
                   Submit a Ticket
                 </Link>
               </div>
             </div>
           </div>
 
-          {/* Service 3: Full Design & Print */}
+          {/* Service 3: Design & Print */}
           <div className="flex flex-col sm:flex-row items-start gap-6 sm:gap-8">
             <div className="w-[150px] h-[150px] shrink-0 rounded-lg overflow-hidden bg-taupe/20 relative">
               <Image
@@ -102,7 +101,7 @@ export default function ServicesStorePage() {
             <div className="flex-1 min-w-0">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
                 <h3 className="text-2xl sm:text-3xl font-display">Design & Print</h3>
-                <span className="text-xl font-display text-charcoal shrink-0">$20/hr</span>
+                <span className="text-xl font-display text-charcoal shrink-0">$12/print hr</span>
               </div>
               <p className="text-charcoal/70 text-base leading-relaxed mb-5">
                 The full package. We design a completely custom organizer from scratch based on your space and needs, then print and ship it to you. Includes a one-on-one consultation to nail every detail.
@@ -111,7 +110,7 @@ export default function ServicesStorePage() {
                 <Link href="https://calendar.google.com" target="_blank" className="btn-primary inline-block text-sm">
                   Book a Free Consultation
                 </Link>
-                <Link href="#contact" className="btn-secondary inline-block text-sm">
+                <Link href="/orders/new?service=design" className="btn-secondary inline-block text-sm">
                   Submit a Ticket
                 </Link>
               </div>

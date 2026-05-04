@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { signOut } from 'next-auth/react'
 import { useState, useEffect, useRef } from 'react'
+import CartDrawer from './CartDrawer'
 
 interface User {
   id: string
@@ -20,6 +21,7 @@ export default function NavbarClient({ user, navLinks }: { user: User | null; na
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const isAdmin = user?.role === 'admin'
 
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -33,7 +35,10 @@ export default function NavbarClient({ user, navLinks }: { user: User | null; na
 
   return (
     <>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        {/* Cart icon — visible to non-admins */}
+        {!isAdmin && <CartDrawer />}
+
         {/* Hamburger — mobile only */}
         <button
           onClick={() => setMobileOpen((v) => !v)}
@@ -51,7 +56,7 @@ export default function NavbarClient({ user, navLinks }: { user: User | null; na
           )}
         </button>
 
-        {/* Desktop: Book now CTA + user menu */}
+        {/* Desktop: CTA + user menu */}
         <div className="hidden md:flex items-center gap-3">
           {!user && (
             <Link href="/services-store#contact" className="btn-primary text-sm">
@@ -73,13 +78,15 @@ export default function NavbarClient({ user, navLinks }: { user: User | null; na
               </button>
               {dropdownOpen && (
                 <div className="absolute right-0 mt-2 w-44 bg-white border border-taupe/50 rounded-xl shadow-lg z-50 overflow-hidden">
+                  {!isAdmin && (
+                    <Link href="/orders" onClick={() => setDropdownOpen(false)}
+                      className="block px-4 py-2.5 text-sm text-charcoal hover:bg-cream transition-colors">
+                      My Orders
+                    </Link>
+                  )}
                   <Link href="/settings" onClick={() => setDropdownOpen(false)}
                     className="block px-4 py-2.5 text-sm text-charcoal hover:bg-cream transition-colors">
                     Settings
-                  </Link>
-                  <Link href="/orders" onClick={() => setDropdownOpen(false)}
-                    className="block px-4 py-2.5 text-sm text-charcoal hover:bg-cream transition-colors">
-                    My Orders
                   </Link>
                   <button onClick={() => signOut({ callbackUrl: '/' })}
                     className="w-full text-left px-4 py-2.5 text-sm text-charcoal hover:bg-cream transition-colors">
@@ -108,13 +115,15 @@ export default function NavbarClient({ user, navLinks }: { user: User | null; na
             <div className="border-t border-taupe/30 my-2" />
             {user ? (
               <>
+                {!isAdmin && (
+                  <Link href="/orders" onClick={() => setMobileOpen(false)}
+                    className="block px-3 py-2.5 rounded-lg text-sm text-warm-gray hover:bg-taupe/20 hover:text-charcoal transition-colors">
+                    My Orders
+                  </Link>
+                )}
                 <Link href="/settings" onClick={() => setMobileOpen(false)}
                   className="block px-3 py-2.5 rounded-lg text-sm text-warm-gray hover:bg-taupe/20 hover:text-charcoal transition-colors">
                   Settings
-                </Link>
-                <Link href="/orders" onClick={() => setMobileOpen(false)}
-                  className="block px-3 py-2.5 rounded-lg text-sm text-warm-gray hover:bg-taupe/20 hover:text-charcoal transition-colors">
-                  My Orders
                 </Link>
                 <button onClick={() => signOut({ callbackUrl: '/' })}
                   className="w-full text-left px-3 py-2.5 rounded-lg text-sm text-warm-gray hover:bg-taupe/20 hover:text-charcoal transition-colors">

@@ -3,9 +3,7 @@ import Image from 'next/image'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
-import ProductCard from '@/components/ProductCard'
-import CustomerDashboard from '@/components/CustomerDashboard'
-import { STATUS_STYLES, formatOrderId } from '@/lib/constants'
+import { formatOrderId } from '@/lib/constants'
 
 export default async function HomePage() {
   const session = await getServerSession(authOptions)
@@ -86,7 +84,6 @@ export default async function HomePage() {
           <p className="text-warm-gray text-sm mt-1">Here&apos;s what&apos;s happening with your shop.</p>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
           {[
             { label: 'Pending',     value: counts.pending,     href: '/admin/orders' },
@@ -101,7 +98,6 @@ export default async function HomePage() {
           ))}
         </div>
 
-        {/* Revenue stats */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
           {[
             { label: 'Revenue This Month', value: `$${revenueThisMonth.toFixed(2)}` },
@@ -116,7 +112,6 @@ export default async function HomePage() {
           ))}
         </div>
 
-        {/* Orders chart */}
         <div className="card p-5 mb-6">
           <p className="text-xs font-semibold text-warm-gray uppercase tracking-wide mb-4">Paid Orders — Last 6 Months</p>
           <div className="flex items-end gap-2 h-24">
@@ -134,7 +129,6 @@ export default async function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Recent messages */}
           <div className="lg:col-span-2 card overflow-hidden">
             <div className="px-5 py-4 border-b border-taupe/30 flex items-center justify-between">
               <h2 className="font-semibold">Recent Messages</h2>
@@ -175,7 +169,6 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Shortcuts */}
           <div className="flex flex-col gap-4">
             <div className="card overflow-hidden">
               <div className="px-5 py-4 border-b border-taupe/30 flex items-center justify-between">
@@ -212,48 +205,7 @@ export default async function HomePage() {
     )
   }
 
-  // Logged-in customer: show listings + dashboard
-  if (session?.user) {
-    const listings = await prisma.product.findMany({ orderBy: { createdAt: 'desc' } })
-
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-10">
-        <div>
-          <div className="flex items-end justify-between mb-6">
-            <div>
-              <p className="text-xs font-semibold tracking-widest text-warm-gray uppercase mb-1">Shop</p>
-              <h2 className="text-xl font-bold">Listings</h2>
-            </div>
-            <Link href="/listings" className="text-sm text-warm-gray hover:text-charcoal transition-colors">
-              View all →
-            </Link>
-          </div>
-
-          {listings.length === 0 ? (
-            <div className="card p-10 text-center">
-              <div className="w-12 h-12 rounded-full bg-taupe/30 flex items-center justify-center mx-auto mb-4">
-                <svg className="w-6 h-6 text-warm-gray" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                </svg>
-              </div>
-              <p className="text-charcoal font-medium mb-1">No listings yet</p>
-              <p className="text-warm-gray text-sm">Check back soon — products will appear here.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {listings.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        <CustomerDashboard userId={session.user.id} />
-      </div>
-    )
-  }
-
-  // Marketing homepage for unauthenticated visitors — warm minimal aesthetic
+  // Everyone else (logged in or not) sees the same marketing homepage
   return (
     <div>
       {/* Hero */}
@@ -281,8 +233,8 @@ export default async function HomePage() {
           <Link href="/services-store" className="btn-primary px-8 py-3 text-base">
             View Services
           </Link>
-          <Link href="/services-store#contact" className="btn-secondary px-8 py-3 text-base">
-            Book Now
+          <Link href="/listings" className="btn-secondary px-8 py-3 text-base">
+            Our Shop
           </Link>
         </div>
       </section>

@@ -14,27 +14,27 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       {purchase === 'success' && (
-        <div className="mb-6 flex items-center gap-3 bg-green-950/40 border border-green-800/50 rounded-lg px-4 py-3">
-          <svg className="w-5 h-5 text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="mb-6 flex items-center gap-3 bg-green-50 border border-green-200 rounded-lg px-4 py-3">
+          <svg className="w-5 h-5 text-green-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
-          <p className="text-sm text-green-300">Purchase successful! We'll be in touch about your order soon.</p>
+          <p className="text-sm text-green-800">Purchase successful! We&apos;ll be in touch about your order soon.</p>
         </div>
       )}
 
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white">Product Listings</h1>
-        <p className="text-zinc-400 mt-2">Browse our catalog of standard 3D printed products.</p>
+        <h1 className="text-3xl font-display">Our Shop</h1>
+        <p className="text-charcoal/60 mt-2">Browse our catalog of ready-made 3D printed products.</p>
       </div>
 
       {products.length === 0 ? (
-        <div className="text-center py-20 text-zinc-600">
-          <svg className="w-16 h-16 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div className="text-center py-20">
+          <svg className="w-16 h-16 mx-auto mb-4 text-warm-gray" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
               d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
-          <p className="text-lg font-medium text-zinc-400">No products yet</p>
-          <p className="text-sm mt-1">Check back soon!</p>
+          <p className="text-lg font-medium text-charcoal">No products yet</p>
+          <p className="text-sm mt-1 text-warm-gray">Check back soon!</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
