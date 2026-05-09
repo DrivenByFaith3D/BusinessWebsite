@@ -44,7 +44,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 </div>
                 <div className="sm:text-right">
                   <p className="text-warm-gray font-medium mb-1 text-xs uppercase tracking-wide">Contact</p>
-                  <p className="text-charcoal text-sm">drivenbyfaith3d@gmail.com</p>
+                  <p className="text-charcoal text-sm">info@drivenbyfaith3d.com</p>
                 </div>
               </div>
               <div className="border-t border-taupe/30 mt-8 pt-6 text-center">
