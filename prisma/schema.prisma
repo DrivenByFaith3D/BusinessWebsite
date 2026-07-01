@@ -25,6 +25,7 @@ model User {
   passwordResetTokens PasswordResetToken[]
   addresses           Address[]
   reviews             Review[]
+  bookings            Booking[]
 }
 
 model Order {
@@ -190,4 +191,23 @@ model Coupon {
   createdAt     DateTime  @default(now())
   minQuantity   Int?
   minOrderValue Float?
+}
+
+model AvailabilitySlot {
+  id        String   @id @default(cuid())
+  startsAt  DateTime
+  duration  Int      // minutes: 15 or 30
+  createdAt DateTime @default(now())
+  booking   Booking?
+}
+
+model Booking {
+  id        String           @id @default(cuid())
+  slotId    String           @unique
+  slot      AvailabilitySlot @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  topic     String?
+  createdAt DateTime         @default(now())
 }

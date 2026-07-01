@@ -59,7 +59,7 @@ export default function NavbarClient({ user, navLinks }: { user: User | null; na
         {/* Desktop: CTA + user menu */}
         <div className="hidden md:flex items-center gap-3">
           {!user && (
-            <Link href="/services-store" className="btn-primary text-sm">
+            <Link href="/book" className="btn-primary text-sm">
               Book now
             </Link>
           )}
@@ -132,7 +132,7 @@ export default function NavbarClient({ user, navLinks }: { user: User | null; na
               </>
             ) : (
               <div className="flex flex-col gap-2 pt-1 pb-1">
-                <Link href="/services-store" onClick={() => setMobileOpen(false)} className="btn-primary text-sm text-center">
+                <Link href="/book" onClick={() => setMobileOpen(false)} className="btn-primary text-sm text-center">
                   Book now
                 </Link>
                 <Link href="/login" onClick={() => setMobileOpen(false)} className="btn-secondary text-sm text-center">

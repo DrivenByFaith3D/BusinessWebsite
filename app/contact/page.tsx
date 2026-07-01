@@ -93,9 +93,9 @@ export default function ContactPage() {
       {/* CTA */}
       <div className="card p-8 text-center">
         <h2 className="text-xl font-display text-charcoal mb-2">Ready to start a project?</h2>
-        <p className="text-warm-gray text-sm mb-5">Book your print and we&apos;ll be in touch to work out the details.</p>
+        <p className="text-warm-gray text-sm mb-5">Book a free consultation and we&apos;ll work out the details together.</p>
         <div className="flex flex-col sm:flex-row gap-3 justify-center">
-          <Link href="/orders/new" className="btn-primary">Book Now</Link>
+          <Link href="/book" className="btn-primary">Book a Consultation</Link>
           <Link href="/listings" className="btn-secondary">Browse Shop</Link>
         </div>
       </div>

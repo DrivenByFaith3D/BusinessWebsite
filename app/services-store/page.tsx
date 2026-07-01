@@ -57,7 +57,7 @@ export default function ServicesStorePage() {
                 Love one of our existing designs but want it tweaked? Change the size, color, material, or add personal touches. Pick a base design from our shop, then tell us how to make it yours.
               </p>
               <div className="flex flex-wrap gap-3">
-                <Link href="https://calendar.google.com" target="_blank" className="btn-primary inline-block text-sm">
+                <Link href="/book" className="btn-primary inline-block text-sm">
                   Book a Free Consultation
                 </Link>
                 <Link href="/orders/new?service=customize" className="btn-secondary inline-block text-sm">
@@ -78,7 +78,7 @@ export default function ServicesStorePage() {
                 The full package. We design a completely custom organizer from scratch based on your space and needs, then print and ship it to you. Includes a one-on-one consultation to nail every detail.
               </p>
               <div className="flex flex-wrap gap-3">
-                <Link href="https://calendar.google.com" target="_blank" className="btn-primary inline-block text-sm">
+                <Link href="/book" className="btn-primary inline-block text-sm">
                   Book a Free Consultation
                 </Link>
                 <Link href="/orders/new?service=design" className="btn-secondary inline-block text-sm">
