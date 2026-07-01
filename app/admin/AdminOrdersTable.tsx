@@ -8,7 +8,7 @@ import { STATUS_STYLES, STATUS_LABELS, formatOrderId } from '@/lib/constants'
 
 type OrderStatus = 'pending' | 'in_progress' | 'label_created' | 'in_transit' | 'out_for_delivery' | 'delivered' | 'cancelled'
 const STATUSES: OrderStatus[] = ['pending', 'in_progress', 'label_created', 'in_transit', 'out_for_delivery', 'delivered', 'cancelled']
-// "completed" was a legacy status — "delivered" is now the final state
+// "completed" was a legacy status, "delivered" is now the final state
 
 interface Order {
   id: string
@@ -398,7 +398,7 @@ function OrderRow({ order, tab, unread, selected, onToggle, onAction }: { order:
                 <div className="flex items-center gap-2">
                   {quote ? (
                     <span className={`text-xs px-2 py-0.5 rounded-full ${paymentStatus === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                      {paymentStatus === 'paid' ? `Paid $${quote.toFixed(2)}` : `Quote: $${quote.toFixed(2)} — Unpaid`}
+                      {paymentStatus === 'paid' ? `Paid $${quote.toFixed(2)}` : `Quote: $${quote.toFixed(2)}, Unpaid`}
                     </span>
                   ) : null}
                   <button onClick={() => setShowQuoteInput(true)} disabled={busy}

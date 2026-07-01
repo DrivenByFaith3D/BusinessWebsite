@@ -92,7 +92,7 @@ export default async function AdminUsersPage() {
                 const stat = statsMap.get(user.id)
                 return (
                   <tr key={user.id} className="hover:bg-taupe/5 transition-colors">
-                    <td className="px-5 py-3 text-charcoal font-medium">{user.name ?? '—'}</td>
+                    <td className="px-5 py-3 text-charcoal font-medium">{user.name ?? '-'}</td>
                     <td className="px-5 py-3 text-warm-gray">{user.email}</td>
                     <td className="px-5 py-3">
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${user.role === 'admin' ? 'bg-charcoal text-white' : 'bg-taupe/20 text-warm-gray'}`}>
@@ -109,7 +109,7 @@ export default async function AdminUsersPage() {
                       )}
                     </td>
                     <td className="px-5 py-3 text-warm-gray">
-                      {stat && stat.spent > 0 ? `$${stat.spent.toFixed(2)}` : <span className="text-warm-gray/60">—</span>}
+                      {stat && stat.spent > 0 ? `$${stat.spent.toFixed(2)}` : <span className="text-warm-gray/60">-</span>}
                     </td>
                     <td className="px-5 py-3 text-warm-gray">
                       {new Date(user.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}

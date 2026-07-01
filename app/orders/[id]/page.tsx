@@ -140,7 +140,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             <svg className="w-5 h-5 text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
-            <p className="text-sm text-green-300">Payment of <span className="font-semibold">${order.quote.toFixed(2)}</span> received — your order is in progress.</p>
+            <p className="text-sm text-green-300">Payment of <span className="font-semibold">${order.quote.toFixed(2)}</span> received, your order is in progress.</p>
           </div>
         </div>
       )}

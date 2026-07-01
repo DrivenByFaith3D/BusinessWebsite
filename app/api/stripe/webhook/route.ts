@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         }).catch(() => {}) // ignore unique constraint if already set
       }
     } else if (productId && session.payment_status === 'paid') {
-      // Product listing purchase — email admin
+      // Product listing purchase, email admin
       try {
         const appUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3000').trim()
         const admins = await prisma.user.findMany({ where: { role: 'admin' }, select: { email: true } })

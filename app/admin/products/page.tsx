@@ -45,8 +45,8 @@ export default async function AdminProductsPage() {
           {[
             { label: 'Total Listings', value: products.length },
             { label: 'Total Reviews', value: totalReviews },
-            { label: 'Avg Rating', value: overallAvg ? `${overallAvg.toFixed(1)} ★` : '—' },
-            { label: 'Most Reviewed', value: mostReviewed ? mostReviewed.name.slice(0, 14) : '—' },
+            { label: 'Avg Rating', value: overallAvg ? `${overallAvg.toFixed(1)} ★` : '-' },
+            { label: 'Most Reviewed', value: mostReviewed ? mostReviewed.name.slice(0, 14) : '-' },
           ].map(stat => (
             <div key={stat.label} className="card p-4">
               <p className="text-lg font-bold text-charcoal">{stat.value}</p>

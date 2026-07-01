@@ -88,7 +88,7 @@ export default function AdminOrderActions({
         {quote ? (
           <div className="mb-3">
             <p className={`text-sm font-medium ${paymentStatus === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>
-              ${quote.toFixed(2)} — {paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}
+              ${quote.toFixed(2)}, {paymentStatus === 'paid' ? 'Paid' : 'Unpaid'}
             </p>
           </div>
         ) : (

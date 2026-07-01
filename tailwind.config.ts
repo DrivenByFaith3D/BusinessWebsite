@@ -9,7 +9,7 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        cream: '#FAF9F7',
+        cream: '#F9F7F4',
         taupe: '#D6D0C8',
         'taupe-dark': '#7D756D',
         charcoal: '#2C2C2C',

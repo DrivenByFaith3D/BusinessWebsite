@@ -102,7 +102,7 @@ export default async function HomePage() {
           {[
             { label: 'Revenue This Month', value: `$${revenueThisMonth.toFixed(2)}` },
             { label: 'Revenue All Time',   value: `$${revenueAllTime.toFixed(2)}` },
-            { label: 'Avg Order Value',    value: avgOrderValue > 0 ? `$${avgOrderValue.toFixed(2)}` : '—' },
+            { label: 'Avg Order Value',    value: avgOrderValue > 0 ? `$${avgOrderValue.toFixed(2)}` : '-' },
             { label: 'Paid This Month',    value: String(ordersThisMonth) },
           ].map((stat) => (
             <div key={stat.label} className="card p-5">
@@ -113,7 +113,7 @@ export default async function HomePage() {
         </div>
 
         <div className="card p-5 mb-6">
-          <p className="text-xs font-semibold text-warm-gray uppercase tracking-wide mb-4">Paid Orders — Last 6 Months</p>
+          <p className="text-xs font-semibold text-warm-gray uppercase tracking-wide mb-4">Paid Orders, Last 6 Months</p>
           <div className="flex items-end gap-2 h-24">
             {monthBuckets.map((b) => (
               <div key={b.label} className="flex-1 flex flex-col items-center gap-1.5">
@@ -208,34 +208,34 @@ export default async function HomePage() {
   // Everyone else (logged in or not) sees the same marketing homepage
   return (
     <div>
-      {/* Hero */}
-      <section className="relative h-[60vh] min-h-[450px] bg-taupe/30">
+      {/* Hero with overlaid text */}
+      <section className="relative h-[80vh] min-h-[560px] bg-taupe/30">
         <Image
-          src="/hero-living-room.jpg"
+          src="/businesshomepage.jpeg"
           alt="Cozy living space"
           fill
           className="object-cover"
           priority
           unoptimized
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-cream/20 to-cream/60" />
-      </section>
-
-      {/* Value prop */}
-      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 text-center">
-        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display leading-tight mb-6">
-          Precision Prints,<br />Made to Order
-        </h1>
-        <p className="text-charcoal/85 text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed mb-10">
-          We specialize in high-quality 3D printed desk organizers. Every print is crafted with care, priced per print hour, so you only pay for exactly what&apos;s made.
-        </p>
-        <div className="flex flex-wrap justify-center gap-4">
-          <Link href="/services-store" className="btn-primary px-8 py-3 text-base">
-            View Services
-          </Link>
-          <Link href="/listings" className="btn-secondary px-8 py-3 text-base">
-            Our Shop
-          </Link>
+        <div className="absolute inset-0 bg-gradient-to-b from-cream/50 via-cream/30 to-cream/70" />
+        <div className="relative z-10 h-full flex items-center justify-center px-4 sm:px-6 lg:px-8">
+          <div className="bg-cream/55 backdrop-blur-md rounded-3xl px-8 sm:px-14 py-10 sm:py-14 max-w-3xl text-center shadow-sm">
+            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display leading-tight mb-5">
+              Precision Prints,<br />Made to Order
+            </h1>
+            <p className="text-charcoal text-lg sm:text-xl max-w-2xl mx-auto leading-relaxed mb-8 font-medium">
+              We specialize in high-quality 3D printed desk organizers. Every print is crafted with care, priced per print hour, so you only pay for exactly what&apos;s made.
+            </p>
+            <div className="flex flex-wrap justify-center gap-4">
+              <Link href="/services-store" className="btn-primary px-8 py-3 text-base">
+                View Services
+              </Link>
+              <Link href="/listings" className="btn-secondary px-8 py-3 text-base bg-cream/70 border-charcoal/50 hover:bg-cream">
+                Our Shop
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -244,11 +244,37 @@ export default async function HomePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-12 text-center">
             {[
-              { title: 'Made to Order', desc: 'Every piece is printed specifically for you — no mass production.' },
-              { title: 'Pay Per Hour', desc: 'Transparent pricing based on actual print time. No hidden fees.' },
-              { title: 'Premium Quality', desc: 'High-resolution layers for a smooth, professional finish every time.' },
+              {
+                title: 'Made to Order',
+                desc: 'Every piece is printed specifically for you, no mass production.',
+                icon: (
+                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 7.5 12 12 3 7.5M12 12v9M21 7.5v9L12 21 3 16.5v-9L12 3l9 4.5Z" />
+                  </svg>
+                ),
+              },
+              {
+                title: 'Pay Per Hour',
+                desc: 'Transparent pricing based on actual print time. No hidden fees.',
+                icon: (
+                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <circle cx="12" cy="12" r="9" />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 7.5V12l3 2" />
+                  </svg>
+                ),
+              },
+              {
+                title: 'Premium Quality',
+                desc: 'High-resolution layers for a smooth, professional finish every time.',
+                icon: (
+                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M11.48 3.5a.6.6 0 0 1 1.04 0l2.28 4.11 4.65.9a.6.6 0 0 1 .33 1l-3.25 3.42.62 4.6a.6.6 0 0 1-.87.63L12 16.7l-4.4 2a.6.6 0 0 1-.86-.64l.62-4.6L4.1 9.51a.6.6 0 0 1 .33-1l4.65-.9 2.4-4.11Z" />
+                  </svg>
+                ),
+              },
             ].map((f) => (
               <div key={f.title}>
+                <div className="flex justify-center mb-4 text-taupe-dark">{f.icon}</div>
                 <h3 className="text-xl font-display mb-2">{f.title}</h3>
                 <p className="text-charcoal/80 text-sm leading-relaxed">{f.desc}</p>
               </div>

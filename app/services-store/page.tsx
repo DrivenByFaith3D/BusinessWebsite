@@ -4,31 +4,30 @@ import Link from 'next/link'
 export default function ServicesStorePage() {
   return (
     <div>
-      {/* Section 1 — Hero Banner */}
-      <section className="w-full h-[50vh] min-h-[400px] relative bg-taupe/30">
+      {/* Section 1, Hero Banner with overlaid intro */}
+      <section className="w-full h-[70vh] min-h-[520px] relative bg-taupe/30">
         <Image
-          src="/hero-living-room.jpg"
-          alt="Cozy living space with 3D printed organizers"
+          src="/servicesimage.jpeg"
+          alt="3D printed desk organizers"
           fill
           className="object-cover"
           priority
           unoptimized
         />
-      </section>
-
-      {/* Section 2 — Services Intro */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 md:gap-20 items-start">
-          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display leading-tight">
-            Our Printing Services
-          </h2>
-          <p className="text-charcoal/80 text-base sm:text-lg leading-relaxed">
-            We specialize in one thing: high-quality 3D printed desk organizers. Every print is made to order and priced per print hour, so you only pay for exactly what&apos;s made. No mass production, no shortcuts — just precision craftsmanship tailored to your space.
-          </p>
+        <div className="absolute inset-0 bg-gradient-to-b from-cream/50 via-cream/30 to-cream/70" />
+        <div className="relative z-10 h-full flex items-center justify-center px-4 sm:px-6 lg:px-8">
+          <div className="bg-cream/55 backdrop-blur-md rounded-3xl px-8 sm:px-14 py-10 sm:py-14 max-w-3xl text-center shadow-sm">
+            <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display leading-tight mb-5">
+              Our Printing Services
+            </h2>
+            <p className="text-charcoal text-base sm:text-lg leading-relaxed font-medium">
+              We specialize in one thing: high-quality 3D printed desk organizers. Every print is made to order and priced per print hour, so you only pay for exactly what&apos;s made. No mass production, no shortcuts, just precision craftsmanship tailored to your space.
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* Section 3 — Service Listings */}
+      {/* Section 3, Service Listings */}
       <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-20 sm:pb-28">
         <div className="space-y-16">
 
@@ -39,7 +38,7 @@ export default function ServicesStorePage() {
                 <h3 className="text-2xl sm:text-3xl font-display">Shop Collection</h3>
               </div>
               <p className="text-charcoal/90 text-base leading-relaxed mb-5">
-                Browse our ready-made desk organizer designs. Pick a style, choose your color, and we print it for you. Each product is individually priced — simple, fast, and affordable.
+                Browse our ready-made desk organizer designs. Pick a style, choose your color, and we print it for you. Each product is individually priced, simple, fast, and affordable.
               </p>
               <Link href="/listings" className="btn-primary inline-block text-sm">
                 Browse the Shop

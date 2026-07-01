@@ -144,13 +144,13 @@ export default function CouponsClient({ initialCoupons }: { initialCoupons: Coup
                       {c.minQuantity && <div>Min qty: {c.minQuantity}</div>}
                       {c.minOrderValue && <div>Min order: ${c.minOrderValue.toFixed(2)}</div>}
                     </div>
-                  ) : '—'}
+                  ) : '-'}
                 </td>
                 <td className="px-5 py-3 text-warm-gray">
                   {c.uses}{c.maxUses ? ` / ${c.maxUses}` : ''}
                 </td>
                 <td className="px-5 py-3 text-warm-gray">
-                  {c.expiresAt ? new Date(c.expiresAt).toLocaleDateString() : '—'}
+                  {c.expiresAt ? new Date(c.expiresAt).toLocaleDateString() : '-'}
                 </td>
                 <td className="px-5 py-3">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${c.active ? 'bg-green-100 text-green-700' : 'bg-taupe/20 text-warm-gray'}`}>

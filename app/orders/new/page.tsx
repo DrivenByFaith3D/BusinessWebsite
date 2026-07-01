@@ -16,7 +16,7 @@ const SERVICES = {
     rate: '$7/print hr',
     fileLabel: 'Upload a reference image (optional)',
     accept: '.png,.jpg,.jpeg,.gif,.webp',
-    placeholder: 'Which product do you want customized? Describe the changes — size, color, material, personal touches…',
+    placeholder: 'Which product do you want customized? Describe the changes, size, color, material, personal touches…',
     fields: ['baseProduct', 'changes'],
   },
   design: {
@@ -25,7 +25,7 @@ const SERVICES = {
     rate: '$12/print hr',
     fileLabel: 'Upload inspiration images or sketches (optional)',
     accept: '.png,.jpg,.jpeg,.gif,.webp,.pdf',
-    placeholder: 'Describe what you want us to create — purpose, dimensions, style, any inspiration or references…',
+    placeholder: 'Describe what you want us to create, purpose, dimensions, style, any inspiration or references…',
     fields: ['idea'],
   },
 }
@@ -81,8 +81,8 @@ export default function NewOrderPage() {
     setLoading(true)
 
     const fullDescription = serviceType === 'customize'
-      ? `[Customize Our Prints — ${selectedService?.rate}]\nBase product: ${baseProduct}\n\n${description}`
-      : `[Design & Print — ${selectedService?.rate}]\n\n${description}`
+      ? `[Customize Our Prints, ${selectedService?.rate}]\nBase product: ${baseProduct}\n\n${description}`
+      : `[Design & Print, ${selectedService?.rate}]\n\n${description}`
 
     const orderType = serviceType === 'customize' ? 'image' : 'scratch'
 
@@ -113,7 +113,7 @@ export default function NewOrderPage() {
     router.push(`/orders/${data.id}`)
   }
 
-  // Step 1 — choose service type
+  // Step 1, choose service type
   if (!serviceType) {
     return (
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -142,7 +142,7 @@ export default function NewOrderPage() {
     )
   }
 
-  // Step 2 — service-specific form
+  // Step 2, service-specific form
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <button onClick={() => { setServiceType(null); setFile(null); setFileError(''); setDescription(''); setBaseProduct('') }}
@@ -164,7 +164,7 @@ export default function NewOrderPage() {
       <div className="card p-6">
         <form onSubmit={handleSubmit} className="space-y-5">
 
-          {/* Base product field — only for Customize */}
+          {/* Base product field, only for Customize */}
           {serviceType === 'customize' && (
             <div>
               <label className="block text-sm font-medium text-charcoal mb-1">

@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
             }).catch((e) => console.error('Tracking status email failed:', e))
           }
         }
-      } catch { /* silent fail — don't block tracking response */ }
+      } catch { /* silent fail, don't block tracking response */ }
     }
 
     return NextResponse.json({

@@ -131,7 +131,7 @@ export default async function CustomerDashboard({ userId }: { userId: string }) 
               {pendingPayments.slice(0, 2).map(o => (
                 <Link key={o.id} href={`/orders/${o.id}`}
                   className="block text-xs font-medium text-yellow-600 hover:text-yellow-700 mb-1 transition-colors">
-                  {formatOrderId(o)} — ${o.quote?.toFixed(2)} →
+                  {formatOrderId(o)}, ${o.quote?.toFixed(2)} →
                 </Link>
               ))}
             </div>

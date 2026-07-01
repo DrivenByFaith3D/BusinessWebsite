@@ -73,7 +73,7 @@ export default function ProductCard({ product, avgRating, reviewCount, isLoggedI
           onClick={() => setShowReviews(v => !v)}
           className="text-xs text-warm-gray hover:text-charcoal transition-colors mt-2 text-left"
         >
-          {showReviews ? 'Hide reviews' : `${reviewCount ? `${reviewCount} review${reviewCount !== 1 ? 's' : ''}` : 'No reviews yet'} — ${isLoggedIn ? 'write one' : 'view'}`}
+          {showReviews ? 'Hide reviews' : `${reviewCount ? `${reviewCount} review${reviewCount !== 1 ? 's' : ''}` : 'No reviews yet'}, ${isLoggedIn ? 'write one' : 'view'}`}
         </button>
         {showReviews && (
           <div className="border-t border-taupe/30 mt-3 pt-3">

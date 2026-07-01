@@ -56,7 +56,7 @@ export default function MessageBubble({ message, isOwn, groupWithPrev, onEdit, o
       )}
 
       <div className={`flex items-end gap-1.5 ${isOwn ? 'flex-row-reverse' : ''}`}>
-        {/* Edit/Delete actions — own messages only, not optimistic */}
+        {/* Edit/Delete actions, own messages only, not optimistic */}
         {isOwn && !isOptimistic && !editing && (
           <div className={`flex items-center gap-1 transition-opacity ${hovered ? 'opacity-100' : 'opacity-0'}`}>
             <button

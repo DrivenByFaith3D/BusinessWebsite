@@ -88,7 +88,7 @@ export function welcomeEmailHtml(appUrl: string) {
     'Welcome to DrivenByFaith3D!',
     `
       <p style="color: #374151;">Your email address has been verified and your account is now active. Welcome aboard!</p>
-      <p style="color: #374151;">You're all set to place your first custom 3D print order. Upload your STL file, share a reference image, or just describe your idea — and we'll take it from there.</p>
+      <p style="color: #374151;">You're all set to place your first custom 3D print order. Upload your STL file, share a reference image, or just describe your idea, and we'll take it from there.</p>
     `,
     `${appUrl}/orders/new`,
     'Start Your First Order'

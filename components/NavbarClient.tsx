@@ -36,10 +36,10 @@ export default function NavbarClient({ user, navLinks }: { user: User | null; na
   return (
     <>
       <div className="flex items-center gap-2">
-        {/* Cart icon — visible to non-admins */}
+        {/* Cart icon, visible to non-admins */}
         {!isAdmin && <CartDrawer />}
 
-        {/* Hamburger — mobile only */}
+        {/* Hamburger, mobile only */}
         <button
           onClick={() => setMobileOpen((v) => !v)}
           className="md:hidden p-2 rounded-lg text-warm-gray hover:text-charcoal transition-colors"
@@ -96,7 +96,7 @@ export default function NavbarClient({ user, navLinks }: { user: User | null; na
               )}
             </div>
           ) : (
-            <Link href="/login" className="btn-secondary text-sm">Login</Link>
+            <Link href="/login" className="text-sm font-medium text-warm-gray hover:text-charcoal transition-colors px-2">Login</Link>
           )}
         </div>
       </div>

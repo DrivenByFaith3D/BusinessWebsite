@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
       },
       include: { user: { select: { email: true, name: true } } },
     })
-    await logOrderEvent(orderId, 'label_created', `Shipping label created — ${transaction.tracking_number}`)
+    await logOrderEvent(orderId, 'label_created', `Shipping label created, ${transaction.tracking_number}`)
 
     // Email customer that their order has shipped
     try {

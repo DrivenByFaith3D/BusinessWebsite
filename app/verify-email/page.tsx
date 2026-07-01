@@ -25,7 +25,7 @@ export default async function VerifyEmailPage({ searchParams }: { searchParams: 
     await sendEmail({
       to: user.email,
       toName: user.name ?? undefined,
-      subject: 'Welcome to DrivenByFaith3D — you\'re verified!',
+      subject: 'Welcome to DrivenByFaith3D, you\'re verified!',
       htmlContent: welcomeEmailHtml(appUrl),
     })
   } catch (e) {

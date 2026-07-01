@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
       await sendEmail({
         to: email,
         toName: name,
-        subject: 'Verify your email — DrivenByFaith3D',
+        subject: 'Verify your email, DrivenByFaith3D',
         htmlContent: verificationEmailHtml(`${appUrl}/verify-email?token=${verificationToken}`),
       })
     } catch (e) {

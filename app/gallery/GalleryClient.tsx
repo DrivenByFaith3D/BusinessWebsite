@@ -176,7 +176,7 @@ export default function GalleryClient({ photos: initialPhotos, isAdmin }: { phot
           </div>
           <p className="text-warm-gray font-medium mb-1">Gallery coming soon</p>
           <p className="text-warm-gray text-sm">
-            {isAdmin ? 'Click "Add Photo" to upload your first gallery image.' : 'We\'re just getting started — check back soon to see our work.'}
+            {isAdmin ? 'Click "Add Photo" to upload your first gallery image.' : 'We\'re just getting started, check back soon to see our work.'}
           </p>
         </div>
       ) : (
@@ -322,7 +322,7 @@ export default function GalleryClient({ photos: initialPhotos, isAdmin }: { phot
                 onChange={e => setInquiryText(e.target.value)}
                 className="input resize-none w-full"
                 rows={4}
-                placeholder="Describe what you're looking for — size, color, any tweaks…"
+                placeholder="Describe what you're looking for, size, color, any tweaks…"
               />
             </div>
             <div className="flex gap-3">

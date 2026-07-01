@@ -32,7 +32,7 @@ export async function PATCH(req: NextRequest) {
     await sendEmail({
       to: order.user.email,
       toName: order.user.name ?? undefined,
-      subject: 'Your quote is ready — DrivenByFaith3D',
+      subject: 'Your quote is ready, DrivenByFaith3D',
       htmlContent: quoteReadyEmailHtml(orderId, formatOrderId(order), Number(quote), appUrl),
     })
   } catch (e) {

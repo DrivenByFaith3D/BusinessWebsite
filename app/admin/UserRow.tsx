@@ -50,7 +50,7 @@ export default function UserRow({ user, inlineActions }: { user: User; inlineAct
 
   return (
     <tr className="hover:bg-taupe/5 transition-colors">
-      <td className="px-5 py-4 text-charcoal">{user.name || '—'}</td>
+      <td className="px-5 py-4 text-charcoal">{user.name || '-'}</td>
       <td className="px-5 py-4 text-warm-gray">{user.email}</td>
       <td className="px-5 py-4">
         <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${user.role === 'admin' ? 'bg-charcoal text-white' : 'bg-taupe/20 text-warm-gray'}`}>

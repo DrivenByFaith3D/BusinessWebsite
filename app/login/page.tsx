@@ -127,7 +127,7 @@ export default function LoginPage() {
             </div>
             <p className="text-charcoal font-medium">Check your email</p>
             <p className="text-sm text-warm-gray">
-              If an account exists for <strong className="text-charcoal">{resetEmail}</strong>, we've sent a password reset link. Check your inbox — it expires in 1 hour.
+              If an account exists for <strong className="text-charcoal">{resetEmail}</strong>, we've sent a password reset link. Check your inbox, it expires in 1 hour.
             </p>
             <button onClick={() => { setShowForgot(false); setResetDone(false) }}
               className="btn-secondary w-full mt-2">

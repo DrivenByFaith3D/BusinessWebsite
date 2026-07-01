@@ -88,7 +88,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
             <p className="text-sm text-charcoal/85 whitespace-pre-wrap leading-relaxed">{order.description}</p>
             {order.orderType && (
               <p className="text-xs text-warm-gray/60 mt-2">
-                Type: {order.orderType === 'stl' ? 'STL File' : order.orderType === 'image' ? 'Image Reference' : 'From Scratch'}
+                Type: {order.orderType === 'stl' ? 'STL File' : order.orderType === 'image' ? 'Image Reference' : order.orderType === 'contact' ? 'Contact Inquiry' : 'From Scratch'}
               </p>
             )}
           </div>
