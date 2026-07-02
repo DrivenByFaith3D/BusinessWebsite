@@ -34,10 +34,10 @@ export async function POST(req: NextRequest) {
     const { orderId, productId, productName } = session.metadata ?? {}
 
     if (orderId && session.payment_status === 'paid') {
-      // Custom order payment
+      // Full custom order payment (paid in full by card)
       const order = await prisma.order.update({
         where: { id: orderId },
-        data: { paymentStatus: 'paid', status: 'in_progress' },
+        data: { paymentStatus: 'paid', paymentMethod: 'card', status: 'in_progress' },
         select: { userId: true },
       })
       await logOrderEvent(orderId, 'payment_received', 'Payment received')

@@ -25,6 +25,7 @@ export async function POST(req: NextRequest) {
   if (!order.quote) return NextResponse.json({ error: 'No quote set for this order' }, { status: 400 })
   if (order.paymentStatus === 'paid') return NextResponse.json({ error: 'Already paid' }, { status: 400 })
 
+  const unitAmount = Math.round(order.quote * 100)
   const appUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3000').trim()
 
   try {
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest) {
               description: order.description.slice(0, 200),
               images: [`${appUrl}/logo.png`],
             },
-            unit_amount: Math.round(order.quote * 100),
+            unit_amount: unitAmount,
           },
           quantity: 1,
         },
@@ -51,12 +52,12 @@ export async function POST(req: NextRequest) {
       mode: 'payment',
       success_url: `${appUrl}/orders/${orderId}/payment-success`,
       cancel_url: `${appUrl}/orders/${orderId}/payment-cancel`,
-      metadata: { orderId },
+      metadata: { orderId, kind: 'full' },
     })
 
     await prisma.order.update({
       where: { id: orderId },
-      data: { stripeSessionId: checkoutSession.id },
+      data: { stripeSessionId: checkoutSession.id, paymentMethod: 'card' },
     })
 
     return NextResponse.json({ url: checkoutSession.url })

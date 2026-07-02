@@ -146,6 +146,7 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
             defaultAddress={defaultAddr}
             quote={order.quote ?? null}
             paymentStatus={order.paymentStatus ?? null}
+            paymentMethod={order.paymentMethod ?? null}
             labelUrl={order.labelUrl ?? null}
           />
 

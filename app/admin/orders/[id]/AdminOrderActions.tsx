@@ -19,6 +19,7 @@ export default function AdminOrderActions({
   defaultAddress,
   quote: initialQuote,
   paymentStatus: initialPaymentStatus,
+  paymentMethod: initialPaymentMethod,
   labelUrl,
 }: {
   orderId: string
@@ -27,16 +28,32 @@ export default function AdminOrderActions({
   defaultAddress: DefaultAddress | null
   quote: number | null
   paymentStatus: string | null
+  paymentMethod: string | null
   labelUrl: string | null
 }) {
   const router = useRouter()
   const [status, setStatus] = useState<OrderStatus>(currentStatus as OrderStatus)
   const [quote, setQuote] = useState<number | null>(initialQuote)
   const [paymentStatus, setPaymentStatus] = useState(initialPaymentStatus)
+  const [paymentMethod] = useState(initialPaymentMethod)
   const [quoteInput, setQuoteInput] = useState(initialQuote ? String(initialQuote) : '')
   const [showQuoteInput, setShowQuoteInput] = useState(false)
   const [showShipModal, setShowShipModal] = useState(false)
   const [busy, setBusy] = useState(false)
+
+  async function paymentAction(action: string) {
+    setBusy(true)
+    const res = await fetch('/api/orders/payment', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId, action }),
+    })
+    setBusy(false)
+    if (!res.ok) return
+    if (action === 'mark_paid') setPaymentStatus('paid')
+    if (action === 'mark_unpaid') setPaymentStatus('unpaid')
+    router.refresh()
+  }
 
   async function updateStatus(newStatus: OrderStatus) {
     setBusy(true)
@@ -124,6 +141,41 @@ export default function AdminOrderActions({
           </button>
         )}
       </div>
+
+      {/* Payment */}
+      {quote && (
+        <div className="card p-5">
+          <h2 className="text-xs font-semibold text-warm-gray uppercase tracking-wide mb-3">Payment</h2>
+          <div className="text-sm space-y-1 mb-3">
+            <p className="text-charcoal">
+              Method: <span className="font-medium">{paymentMethod === 'check' ? 'Check' : paymentMethod === 'card' ? 'Card' : 'Not chosen yet'}</span>
+            </p>
+            {paymentStatus === 'paid' ? (
+              <p className="text-green-600 font-medium">Paid in full — ${quote.toFixed(2)}</p>
+            ) : (
+              <>
+                <p className="text-amber-600 font-medium">Unpaid — ${quote.toFixed(2)}</p>
+                {paymentMethod === 'check' && (
+                  <p className="text-warm-gray">Full payment by check due before printing.</p>
+                )}
+              </>
+            )}
+          </div>
+
+          {paymentStatus !== 'paid' && (
+            <div className="flex flex-col gap-2">
+              <button onClick={() => paymentAction('mark_paid')} disabled={busy} className="btn-primary text-sm w-full disabled:opacity-40">
+                Mark paid in full
+              </button>
+            </div>
+          )}
+          {paymentStatus === 'paid' && (
+            <button onClick={() => paymentAction('mark_unpaid')} disabled={busy} className="btn-secondary text-sm w-full disabled:opacity-40">
+              Undo — mark unpaid
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Shipping */}
       <div className="card p-5">

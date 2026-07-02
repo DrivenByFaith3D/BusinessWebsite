@@ -44,6 +44,9 @@ model Order {
   labelUrl       String?
   quote          Float?
   paymentStatus  String?
+  paymentMethod  String?   // 'card' (paid in full) or 'check' (deposit + balance by check)
+  depositPaid    Boolean   @default(false)
+  depositWaived  Boolean   @default(false)
   stripeSessionId String?
   createdAt      DateTime @default(now())
   archivedAt     DateTime?

@@ -6,7 +6,7 @@ import { prisma } from '@/lib/prisma'
 import ChatWindow from '@/components/ChatWindow'
 import OrderProgressBar from '@/components/OrderProgressBar'
 import ShippingStatus from '@/components/ShippingStatus'
-import PayButton from '@/components/PayButton'
+import CheckoutOptions from '@/components/CheckoutOptions'
 import AdminNotes from '@/components/AdminNotes'
 import CustomerNotes from '@/components/CustomerNotes'
 import OrderDescription from '@/components/OrderDescription'
@@ -123,15 +123,11 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
       )}
 
       {!isAdmin && order.quote && order.paymentStatus !== 'paid' && (
-        <div className="card p-5 mb-6 border border-yellow-800/50 bg-yellow-950/20">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h2 className="text-sm font-semibold text-charcoal">Quote Ready</h2>
-              <p className="text-warm-gray text-sm mt-0.5">Your order has been quoted at <span className="text-charcoal font-semibold">${order.quote.toFixed(2)}</span>. Pay to get started.</p>
-            </div>
-            <PayButton orderId={order.id} amount={order.quote} />
-          </div>
-        </div>
+        <CheckoutOptions
+          orderId={order.id}
+          quote={order.quote}
+          paymentMethod={order.paymentMethod}
+        />
       )}
 
       {!isAdmin && order.paymentStatus === 'paid' && order.quote && (
