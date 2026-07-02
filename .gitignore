@@ -37,3 +37,4 @@ next-env.d.ts
 .env.verify
 .env.vercel
 .env.vercel.prod
+.env*
