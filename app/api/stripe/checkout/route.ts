@@ -63,7 +63,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: checkoutSession.url })
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Stripe error'
-    console.error('Stripe checkout error:', message)
-    return NextResponse.json({ error: message }, { status: 500 })
+    // TEMP DIAGNOSTIC — remove after root-causing the connection error
+    const anyE = e as any
+    console.error('Stripe checkout error:', message, { type: anyE?.type, code: anyE?.code, detailCode: anyE?.detail?.code, detailMessage: anyE?.detail?.message, detailErrno: anyE?.detail?.errno })
+    return NextResponse.json({ error: message, _debug: { type: anyE?.type, code: anyE?.code, detailCode: anyE?.detail?.code, detailMessage: anyE?.detail?.message } }, { status: 500 })
   }
 }
