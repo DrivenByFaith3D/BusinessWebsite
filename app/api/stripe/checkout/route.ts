@@ -6,7 +6,7 @@ import { formatOrderId } from '@/lib/constants'
 
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not set')
-  return new Stripe(process.env.STRIPE_SECRET_KEY)
+  return new Stripe(process.env.STRIPE_SECRET_KEY.trim())
 }
 
 export async function POST(req: NextRequest) {
@@ -63,9 +63,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ url: checkoutSession.url })
   } catch (e) {
     const message = e instanceof Error ? e.message : 'Stripe error'
-    // TEMP DIAGNOSTIC — remove after root-causing the connection error
-    const anyE = e as any
-    console.error('Stripe checkout error:', message, { type: anyE?.type, code: anyE?.code, detailCode: anyE?.detail?.code, detailMessage: anyE?.detail?.message, detailErrno: anyE?.detail?.errno })
-    return NextResponse.json({ error: message, _debug: { type: anyE?.type, code: anyE?.code, detailCode: anyE?.detail?.code, detailMessage: anyE?.detail?.message } }, { status: 500 })
+    console.error('Stripe checkout error:', message)
+    return NextResponse.json({ error: message }, { status: 500 })
   }
 }
