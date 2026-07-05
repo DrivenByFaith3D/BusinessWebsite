@@ -60,6 +60,8 @@ model Order {
   quoteHistory  QuoteHistory[]
   events        OrderEvent[]
   photos        OrderPhoto[]
+
+  @@index([userId, createdAt])
 }
 
 model Message {
@@ -71,6 +73,9 @@ model Message {
   content   String
   fileUrl   String?
   createdAt DateTime @default(now())
+
+  @@index([orderId, createdAt])
+  @@index([senderId])
 }
 
 model FileUpload {
@@ -80,6 +85,8 @@ model FileUpload {
   url       String
   name      String?
   createdAt DateTime @default(now())
+
+  @@index([orderId])
 }
 
 model PasswordResetRequest {
@@ -103,6 +110,8 @@ model QuoteHistory {
   order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   amount    Float
   createdAt DateTime @default(now())
+
+  @@index([orderId])
 }
 
 model OrderView {
@@ -123,6 +132,8 @@ model OrderEvent {
   type        String
   description String
   createdAt   DateTime @default(now())
+
+  @@index([orderId])
 }
 
 model OrderPhoto {
@@ -133,6 +144,8 @@ model OrderPhoto {
   caption   String?
   category  String?
   createdAt DateTime @default(now())
+
+  @@index([orderId])
 }
 
 model Address {
@@ -147,6 +160,8 @@ model Address {
   country   String   @default("US")
   isDefault Boolean  @default(false)
   createdAt DateTime @default(now())
+
+  @@index([userId])
 }
 
 model Product {

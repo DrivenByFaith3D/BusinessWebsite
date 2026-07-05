@@ -37,26 +37,28 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
 
   const totalPages = Math.ceil(total / PER_PAGE)
 
-  // Get unread message counts per order (messages from admin since last view)
-  const orderViews = await prisma.orderView.findMany({
-    where: { userId: session.user.id, orderId: { in: orders.map(o => o.id) } },
-  })
+  // Get unread message counts per order (messages from others since last view).
+  // One query for views + one for messages, then tally in memory (avoids an N+1
+  // count() per order).
+  const orderIds = orders.map(o => o.id)
+  const [orderViews, unreadMessages] = await Promise.all([
+    prisma.orderView.findMany({
+      where: { userId: session.user.id, orderId: { in: orderIds } },
+    }),
+    prisma.message.findMany({
+      where: { orderId: { in: orderIds }, senderId: { not: session.user.id } },
+      select: { orderId: true, createdAt: true },
+    }),
+  ])
   const viewMap = new Map(orderViews.map(v => [v.orderId, v.viewedAt]))
 
-  const unreadCounts = await Promise.all(
-    orders.map(async (order) => {
-      const lastViewed = viewMap.get(order.id)
-      const count = await prisma.message.count({
-        where: {
-          orderId: order.id,
-          senderId: { not: session.user.id },
-          ...(lastViewed ? { createdAt: { gt: lastViewed } } : {}),
-        },
-      })
-      return { orderId: order.id, count }
-    })
-  )
-  const unreadMap = new Map(unreadCounts.map(u => [u.orderId, u.count]))
+  const unreadMap = new Map<string, number>()
+  for (const m of unreadMessages) {
+    const lastViewed = viewMap.get(m.orderId)
+    if (!lastViewed || m.createdAt > lastViewed) {
+      unreadMap.set(m.orderId, (unreadMap.get(m.orderId) ?? 0) + 1)
+    }
+  }
 
   return (
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

@@ -25,26 +25,28 @@ export default async function AdminOrdersPage() {
     orderBy: { createdAt: 'desc' },
   })
 
-  // Get unread counts for admin: messages from non-admins since admin last viewed each order
-  const adminViews = await prisma.orderView.findMany({
-    where: { userId: session.user.id, orderId: { in: orders.map(o => o.id) } },
-  })
+  // Get unread counts for admin: messages from non-admins since admin last viewed
+  // each order. One query for views + one for messages, tallied in memory (avoids
+  // an N+1 count() per order).
+  const orderIds = orders.map(o => o.id)
+  const [adminViews, nonAdminMessages] = await Promise.all([
+    prisma.orderView.findMany({
+      where: { userId: session.user.id, orderId: { in: orderIds } },
+    }),
+    prisma.message.findMany({
+      where: { orderId: { in: orderIds }, sender: { role: { not: 'admin' } } },
+      select: { orderId: true, createdAt: true },
+    }),
+  ])
   const adminViewMap = new Map(adminViews.map(v => [v.orderId, v.viewedAt]))
 
-  const unreadCounts = await Promise.all(
-    orders.map(async (order) => {
-      const lastViewed = adminViewMap.get(order.id)
-      const count = await prisma.message.count({
-        where: {
-          orderId: order.id,
-          sender: { role: { not: 'admin' } },
-          ...(lastViewed ? { createdAt: { gt: lastViewed } } : {}),
-        },
-      })
-      return { orderId: order.id, count }
-    })
-  )
-  const unreadMap = Object.fromEntries(unreadCounts.map(u => [u.orderId, u.count]))
+  const unreadMap: Record<string, number> = {}
+  for (const m of nonAdminMessages) {
+    const lastViewed = adminViewMap.get(m.orderId)
+    if (!lastViewed || m.createdAt > lastViewed) {
+      unreadMap[m.orderId] = (unreadMap[m.orderId] ?? 0) + 1
+    }
+  }
 
   const tableOrders = orders.map((o) => {
     const defaultAddr = o.user.addresses[0] ?? null

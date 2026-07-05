@@ -23,7 +23,7 @@ export default async function HomePage() {
     sixMonthsAgo.setDate(1)
     sixMonthsAgo.setHours(0, 0, 0, 0)
 
-    const [activeOrders, recentMessages, listingsCount, paidOrders] = await Promise.all([
+    const [activeOrders, recentMessages, listingsCount, paidOrders, allTimePaid] = await Promise.all([
       prisma.order.findMany({
         where: { archivedAt: null, deletedAt: null },
       }),
@@ -40,13 +40,12 @@ export default async function HomePage() {
         where: { paymentStatus: 'paid', deletedAt: null, createdAt: { gte: sixMonthsAgo } },
         select: { quote: true, createdAt: true },
       }),
+      prisma.order.aggregate({
+        where: { paymentStatus: 'paid', deletedAt: null },
+        _sum: { quote: true },
+        _count: true,
+      }),
     ])
-
-    const allTimePaid = await prisma.order.aggregate({
-      where: { paymentStatus: 'paid', deletedAt: null },
-      _sum: { quote: true },
-      _count: true,
-    })
 
     const revenueThisMonth = paidOrders
       .filter(o => new Date(o.createdAt) >= startOfMonth)
