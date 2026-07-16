@@ -42,17 +42,8 @@ export async function POST(req: NextRequest) {
     })
   } catch (e) {
     console.error('Resend verification email failed:', e)
-    // TEMP DIAGNOSTIC — remove once the mail failure is root-caused
     return NextResponse.json(
-      {
-        error: 'We could not send the email right now. Please try again shortly.',
-        _debug: {
-          message: e instanceof Error ? e.message : String(e),
-          hasKey: Boolean(process.env.BREVO_API_KEY),
-          keyLen: process.env.BREVO_API_KEY?.length ?? 0,
-          sender: process.env.BREVO_SENDER_EMAIL ?? null,
-        },
-      },
+      { error: 'We could not send the email right now. Please try again shortly.' },
       { status: 502 },
     )
   }
