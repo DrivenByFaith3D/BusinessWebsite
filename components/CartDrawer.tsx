@@ -7,11 +7,13 @@ import { useCart } from './CartProvider'
 export default function CartDrawer() {
   const [open, setOpen] = useState(false)
   const [checkingOut, setCheckingOut] = useState(false)
+  const [error, setError] = useState('')
   const { items, removeItem, updateQuantity, clearCart, totalItems, totalPrice } = useCart()
 
   async function handleCheckout() {
     if (items.length === 0) return
     setCheckingOut(true)
+    setError('')
     try {
       const res = await fetch('/api/stripe/product-checkout', {
         method: 'POST',
@@ -21,13 +23,15 @@ export default function CartDrawer() {
         }),
       })
       const data = await res.json()
-      if (data.url) {
-        clearCart()
-        window.location.href = data.url
+      if (!res.ok || !data.url) {
+        setError(data.error || 'Could not start checkout. Please try again.')
+        setCheckingOut(false)
+        return
       }
+      clearCart()
+      window.location.href = data.url
     } catch {
-      // handle silently
-    } finally {
+      setError('Network error. Please try again.')
       setCheckingOut(false)
     }
   }
@@ -126,10 +130,13 @@ export default function CartDrawer() {
                   <span className="text-sm text-charcoal/90">Subtotal</span>
                   <span className="text-lg font-display">${totalPrice.toFixed(2)}</span>
                 </div>
+                {error && (
+                  <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+                )}
                 <button
                   onClick={handleCheckout}
                   disabled={checkingOut}
-                  className="btn-primary w-full text-center"
+                  className="btn-primary w-full text-center disabled:opacity-50"
                 >
                   {checkingOut ? 'Redirecting...' : 'Checkout'}
                 </button>
