@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { sendEmail, newMessageEmailHtml } from '@/lib/brevo'
 import { requireAuth } from '@/lib/api'
 import { rateLimit } from '@/lib/rate-limit'
+import { adminNotifyEmails } from '@/lib/notify'
 
 export async function GET(req: NextRequest) {
   const { session, error } = await requireAuth()
@@ -76,10 +77,9 @@ export async function POST(req: NextRequest) {
         htmlContent: newMessageEmailHtml(orderId, appUrl),
       })
     } else {
-      const admins = await prisma.user.findMany({ where: { role: 'admin' }, select: { email: true } })
-      for (const admin of admins) {
+      for (const to of await adminNotifyEmails()) {
         await sendEmail({
-          to: admin.email,
+          to,
           subject: `New message on order #${orderId.slice(0, 8).toUpperCase()}`,
           htmlContent: newMessageEmailHtml(orderId, appUrl),
         })

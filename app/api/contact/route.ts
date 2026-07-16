@@ -5,6 +5,7 @@ import { sendEmail, newOrderEmailHtml } from '@/lib/brevo'
 import { formatOrderId } from '@/lib/constants'
 import { rateLimit } from '@/lib/rate-limit'
 import { logOrderEvent } from '@/lib/events'
+import { adminNotifyEmails } from '@/lib/notify'
 
 // Contact form submissions land in the admin messaging system as a "contact" inquiry.
 // Requires the user to be signed in so we can reply and keep them updated.
@@ -57,11 +58,14 @@ export async function POST(req: NextRequest) {
     // Notify admin (non-blocking)
     try {
       const appUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
-      await sendEmail({
-        to: adminUser.email,
-        subject: `New contact message: ${formatOrderId(order)} (${type})`,
-        htmlContent: newOrderEmailHtml(order.id, formatOrderId(order), 'contact', description, session.user.email, appUrl),
-      })
+      const htmlContent = newOrderEmailHtml(order.id, formatOrderId(order), 'contact', description, session.user.email, appUrl)
+      for (const to of await adminNotifyEmails()) {
+        await sendEmail({
+          to,
+          subject: `New contact message: ${formatOrderId(order)} (${type})`,
+          htmlContent,
+        })
+      }
     } catch (e) {
       console.error('Contact email failed:', e)
     }

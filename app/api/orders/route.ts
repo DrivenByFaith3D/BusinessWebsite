@@ -5,6 +5,7 @@ import { sendEmail, newOrderEmailHtml } from '@/lib/brevo'
 import { formatOrderId } from '@/lib/constants'
 import { rateLimit } from '@/lib/rate-limit'
 import { logOrderEvent } from '@/lib/events'
+import { adminNotifyEmails } from '@/lib/notify'
 
 const TYPE_PREFIX: Record<string, string> = {
   stl: 'STL',
@@ -55,18 +56,21 @@ export async function POST(req: NextRequest) {
     // Email admin about the new order
     try {
       const appUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
-      await sendEmail({
-        to: adminUser.email,
-        subject: `New order: ${formatOrderId(order)}`,
-        htmlContent: newOrderEmailHtml(
-          order.id,
-          formatOrderId(order),
-          type,
-          description.trim(),
-          session.user.email,
-          appUrl
-        ),
-      })
+      const htmlContent = newOrderEmailHtml(
+        order.id,
+        formatOrderId(order),
+        type,
+        description.trim(),
+        session.user.email,
+        appUrl
+      )
+      for (const to of await adminNotifyEmails()) {
+        await sendEmail({
+          to,
+          subject: `New order: ${formatOrderId(order)}`,
+          htmlContent,
+        })
+      }
     } catch (e) {
       console.error('New order email failed:', e)
     }

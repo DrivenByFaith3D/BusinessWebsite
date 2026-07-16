@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/api'
 import { rateLimit } from '@/lib/rate-limit'
 import { sendEmail } from '@/lib/brevo'
+import { adminNotifyEmails } from '@/lib/notify'
 
 // Customer: book an open slot (requires sign-in)
 export async function POST(req: NextRequest) {
@@ -41,10 +42,9 @@ export async function POST(req: NextRequest) {
   try {
     const appUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
     const when = slot.startsAt.toLocaleString('en-US', { dateStyle: 'full', timeStyle: 'short' })
-    const admins = await prisma.user.findMany({ where: { role: 'admin' }, select: { email: true } })
-    for (const a of admins) {
+    for (const to of await adminNotifyEmails()) {
       await sendEmail({
-        to: a.email,
+        to,
         subject: `New consultation booked — ${when}`,
         htmlContent: `<p><strong>${bookingName}</strong> (${session.user.email}) booked a ${slot.duration}-minute consultation.</p>`
           + `<p><strong>When:</strong> ${when}</p>`

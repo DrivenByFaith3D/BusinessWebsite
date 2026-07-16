@@ -3,6 +3,7 @@ import Stripe from 'stripe'
 import { prisma } from '@/lib/prisma'
 import { sendEmail, productPurchaseAdminEmailHtml, productPurchaseBuyerEmailHtml } from '@/lib/brevo'
 import { logOrderEvent } from '@/lib/events'
+import { adminNotifyEmails } from '@/lib/notify'
 
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not set')
@@ -52,12 +53,11 @@ export async function POST(req: NextRequest) {
       // Product listing purchase, email admin
       try {
         const appUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3000').trim()
-        const admins = await prisma.user.findMany({ where: { role: 'admin' }, select: { email: true } })
         const amount = (session.amount_total ?? 0) / 100
         const buyerEmail = session.customer_email ?? session.customer_details?.email ?? 'Unknown'
-        for (const admin of admins) {
+        for (const to of await adminNotifyEmails()) {
           await sendEmail({
-            to: admin.email,
+            to,
             subject: `New product purchase: ${productName ?? 'Product'}`,
             htmlContent: productPurchaseAdminEmailHtml(productName ?? 'Product', amount, buyerEmail, appUrl),
           })
