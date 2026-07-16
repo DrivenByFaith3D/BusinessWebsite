@@ -6,16 +6,21 @@ interface SendEmailParams {
 }
 
 export async function sendEmail({ to, toName, subject, htmlContent }: SendEmailParams) {
+  // Values are trimmed: a stray newline from a copy-pasted env var makes the
+  // runtime reject the header outright, which fails every send.
+  const apiKey = process.env.BREVO_API_KEY?.trim()
+  if (!apiKey) throw new Error('BREVO_API_KEY is not set')
+
   const response = await fetch('https://api.brevo.com/v3/smtp/email', {
     method: 'POST',
     headers: {
-      'api-key': process.env.BREVO_API_KEY!,
+      'api-key': apiKey,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
       sender: {
-        email: process.env.BREVO_SENDER_EMAIL!,
-        name: process.env.BREVO_SENDER_NAME || '3D Print Shop',
+        email: process.env.BREVO_SENDER_EMAIL?.trim(),
+        name: process.env.BREVO_SENDER_NAME?.trim() || '3D Print Shop',
       },
       to: [{ email: to, name: toName || to }],
       subject,

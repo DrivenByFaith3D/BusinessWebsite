@@ -16,6 +16,7 @@ model User {
   mustChangePassword Boolean  @default(false)
   emailVerified      Boolean  @default(false)
   verificationToken  String?  @unique
+  verificationTokenExpires DateTime?
   stripeCustomerId   String?  @unique
   createdAt          DateTime @default(now())
 

@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { sendEmail, verificationEmailHtml } from '@/lib/brevo'
 import { rateLimit } from '@/lib/rate-limit'
+import { VERIFICATION_TTL_MS } from '@/lib/verification'
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for') ?? 'unknown'
@@ -33,6 +34,7 @@ export async function POST(req: NextRequest) {
       email, password: hashed, name, role,
       emailVerified: isAdmin ? true : false,
       verificationToken,
+      verificationTokenExpires: verificationToken ? new Date(Date.now() + VERIFICATION_TTL_MS) : null,
     },
   })
 
@@ -42,6 +44,9 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  // Track whether the verification email actually went out. Reporting success
+  // when it silently failed leaves the account unusable with no way to recover.
+  let emailSent = true
   if (!isAdmin && verificationToken) {
     try {
       const appUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3000').trim()
@@ -52,9 +57,16 @@ export async function POST(req: NextRequest) {
         htmlContent: verificationEmailHtml(`${appUrl}/verify-email?token=${verificationToken}`),
       })
     } catch (e) {
+      emailSent = false
       console.error('Verification email failed:', e)
     }
   }
 
-  return NextResponse.json({ id: user.id, email: user.email, role: user.role, needsVerification: !isAdmin })
+  return NextResponse.json({
+    id: user.id,
+    email: user.email,
+    role: user.role,
+    needsVerification: !isAdmin,
+    emailSent,
+  })
 }

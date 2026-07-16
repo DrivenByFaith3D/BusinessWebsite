@@ -17,15 +17,44 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  const [unverified, setUnverified] = useState(false)
+  const [resendState, setResendState] = useState<'idle' | 'loading' | 'sent'>('idle')
+  const [resendError, setResendError] = useState('')
+
   const [showForgot, setShowForgot] = useState(false)
   const [resetEmail, setResetEmail] = useState('')
   const [resetLoading, setResetLoading] = useState(false)
   const [resetDone, setResetDone] = useState(false)
   const [resetError, setResetError] = useState('')
 
+  async function handleResendVerification() {
+    setResendState('loading')
+    setResendError('')
+    try {
+      const res = await fetch('/api/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setResendError(data.error || 'Could not send the email. Please try again.')
+        setResendState('idle')
+        return
+      }
+      setResendState('sent')
+    } catch {
+      setResendError('Network error. Please try again.')
+      setResendState('idle')
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError('')
+    setUnverified(false)
+    setResendState('idle')
+    setResendError('')
     setLoading(true)
 
     const res = await signIn('credentials', { email, password, redirect: false })
@@ -33,6 +62,7 @@ export default function LoginPage() {
     if (res?.error) {
       if (res.error === 'EMAIL_NOT_VERIFIED') {
         setError('Please verify your email before signing in. Check your inbox for the verification link.')
+        setUnverified(true)
       } else {
         setError('Invalid email or password')
       }
@@ -98,7 +128,26 @@ export default function LoginPage() {
               </div>
 
               {error && (
-                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+                <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  <p>{error}</p>
+                  {unverified && resendState !== 'sent' && (
+                    <button
+                      type="button"
+                      onClick={handleResendVerification}
+                      disabled={resendState === 'loading'}
+                      className="mt-2 text-charcoal font-medium underline hover:no-underline disabled:opacity-50"
+                    >
+                      {resendState === 'loading' ? 'Sending…' : 'Resend verification email'}
+                    </button>
+                  )}
+                  {resendError && <p className="mt-2 text-red-600">{resendError}</p>}
+                </div>
+              )}
+
+              {unverified && resendState === 'sent' && (
+                <p className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                  Verification email sent to <strong>{email}</strong>. Check your inbox and spam folder.
+                </p>
               )}
 
               <button type="submit" disabled={loading} className="btn-primary w-full">

@@ -20,6 +20,7 @@ export default function SignupPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [needsVerification, setNeedsVerification] = useState(false)
+  const [emailSent, setEmailSent] = useState(true)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -40,6 +41,7 @@ export default function SignupPage() {
     }
 
     if (data.needsVerification) {
+      setEmailSent(data.emailSent !== false)
       setNeedsVerification(true)
       setLoading(false)
       return
@@ -60,11 +62,22 @@ export default function SignupPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
               </svg>
             </div>
-            <h1 className="text-xl font-bold text-charcoal">Check your email</h1>
-            <p className="text-warm-gray text-sm">
-              We sent a verification link to <strong className="text-charcoal">{email}</strong>. Click it to activate your account before signing in.
-            </p>
-            <p className="text-warm-gray text-xs opacity-70">Didn&apos;t receive it? Check your spam folder.</p>
+            {emailSent ? (
+              <>
+                <h1 className="text-xl font-bold text-charcoal">Check your email</h1>
+                <p className="text-warm-gray text-sm">
+                  We sent a verification link to <strong className="text-charcoal">{email}</strong>. Click it to activate your account before signing in.
+                </p>
+                <p className="text-warm-gray text-xs opacity-70">Didn&apos;t receive it? Check your spam folder, or resend it from the sign in page.</p>
+              </>
+            ) : (
+              <>
+                <h1 className="text-xl font-bold text-charcoal">Account created</h1>
+                <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-left">
+                  Your account was created, but we could not send the verification email just now. Go to the sign in page and choose &ldquo;Resend verification email&rdquo; to try again.
+                </p>
+              </>
+            )}
             <Link href="/login" className="btn-secondary w-full inline-block text-center mt-2">Back to Sign In</Link>
           </div>
         ) : (
