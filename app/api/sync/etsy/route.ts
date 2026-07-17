@@ -111,6 +111,25 @@ export async function GET(req: NextRequest) {
   if (secret && req.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  // TEMP: dump the raw Etsy payload so the sync can be built against every field
+  // the API actually returns. Listing data is already public on Etsy; no secrets
+  // are involved. Remove once the full sync is in place.
+  if (req.nextUrl.searchParams.get('raw') === '1') {
+    try {
+      const shopId = await resolveShopId(etsyShopName())
+      const listings = await fetchActiveListings(shopId)
+      const details = await fetchListingDetails(listings.map((l) => l.listing_id))
+      return NextResponse.json({
+        baseKeys: Object.keys(listings[0] ?? {}),
+        base: listings[0] ?? null,
+        detail: details.get(listings[0]?.listing_id) ?? null,
+      })
+    } catch (e) {
+      return failure(e)
+    }
+  }
+
   try {
     return NextResponse.json({ ok: true, ...(await runSync()) })
   } catch (e) {

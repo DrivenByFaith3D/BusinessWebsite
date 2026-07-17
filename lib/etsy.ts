@@ -128,14 +128,17 @@ export function listingPrice(listing: EtsyListing): number {
 // returning every image plus the shipping profile. Fetched 100 at a time rather
 // than per listing. A failure here degrades to "no detail" rather than failing the
 // whole sync, since the core listing data is already in hand.
-export async function fetchListingDetails(listingIds: number[]): Promise<Map<number, EtsyListing>> {
+export async function fetchListingDetails(
+  listingIds: number[],
+  includes = 'Images,Shipping,Inventory,Videos',
+): Promise<Map<number, EtsyListing>> {
   const details = new Map<number, EtsyListing>()
 
   for (let i = 0; i < listingIds.length; i += 100) {
     const chunk = listingIds.slice(i, i + 100)
     try {
       const data = await etsyGet<{ results: EtsyListing[] }>(
-        `/listings/batch?listing_ids=${chunk.join(',')}&includes=Images,Shipping`,
+        `/listings/batch?listing_ids=${chunk.join(',')}&includes=${includes}`,
       )
       for (const listing of data.results ?? []) {
         details.set(listing.listing_id, listing)
