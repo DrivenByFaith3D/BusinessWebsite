@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 
 function getStripe() {
@@ -72,7 +74,41 @@ export async function POST(req: NextRequest) {
       ? `${products[0].name}${totalItems > 1 ? ` x${totalItems}` : ''}`
       : `${products[0].name} and ${products.length - 1} more`
 
-  const customerEmail = typeof body.customerEmail === 'string' ? body.customerEmail : undefined
+  const total = products.reduce(
+    (sum, product) => sum + product.price * (wanted.get(product.id) ?? 1),
+    0,
+  )
+
+  // Signed in? Tie the purchase to the account so it shows in My Orders.
+  // Guests still get a recorded order, just without a userId.
+  const authSession = await getServerSession(authOptions)
+  const userId = authSession?.user?.id ?? null
+  const customerEmail =
+    authSession?.user?.email ?? (typeof body.customerEmail === 'string' ? body.customerEmail : undefined)
+
+  const count = await prisma.shopOrder.count()
+  const orderNumber = `SHOP-${String(count + 1).padStart(4, '0')}`
+
+  // Recorded up front so the webhook only has to flip it to paid. Keeps the exact
+  // items and prices we charged, independent of Stripe metadata size limits.
+  const shopOrder = await prisma.shopOrder.create({
+    data: {
+      orderNumber,
+      userId,
+      email: customerEmail ?? null,
+      status: 'pending',
+      total: Math.round(total * 100) / 100,
+      items: {
+        create: products.map((product) => ({
+          productId: product.id,
+          name: product.name,
+          price: product.price,
+          quantity: wanted.get(product.id) ?? 1,
+        })),
+      },
+    },
+  })
+
   const appUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3000').trim()
 
   try {
@@ -85,16 +121,22 @@ export async function POST(req: NextRequest) {
       success_url: `${appUrl}/listings?purchase=success`,
       cancel_url: `${appUrl}/listings`,
       metadata: {
-        // productId keeps the existing webhook branch working; productName is what
-        // the confirmation emails read.
-        productId: products[0].id,
+        shopOrderId: shopOrder.id,
+        // productName is what the confirmation emails read.
         productName: summary,
         itemCount: String(totalItems),
       },
     })
 
+    await prisma.shopOrder.update({
+      where: { id: shopOrder.id },
+      data: { stripeSessionId: session.id },
+    })
+
     return NextResponse.json({ url: session.url })
   } catch (e) {
+    // Don't leave an orphaned pending order behind if Stripe never opened.
+    await prisma.shopOrder.delete({ where: { id: shopOrder.id } }).catch(() => {})
     const message = e instanceof Error ? e.message : 'Stripe error'
     console.error('Product checkout error:', message)
     return NextResponse.json({ error: message }, { status: 500 })

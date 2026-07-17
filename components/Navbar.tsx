@@ -7,10 +7,15 @@ export default async function Navbar() {
   const session = await getServerSession(authOptions)
   const isAdmin = session?.user?.role === 'admin'
 
+  const isCustomer = !!session?.user && !isAdmin
+
   const navLinks = [
     ...(!isAdmin ? [
       { label: 'Services', href: '/services-store' },
       { label: 'Shop', href: '/listings' },
+      // Signed-in customers get their orders straight from the nav rather than
+      // buried in the account dropdown.
+      ...(isCustomer ? [{ label: 'My Orders', href: '/orders' }] : []),
       { label: 'About', href: '/about' },
       { label: 'Contact', href: '/contact' },
     ] : []),

@@ -63,6 +63,11 @@ export default function NavbarClient({ user, navLinks }: { user: User | null; na
               Book now
             </Link>
           )}
+          {user && !isAdmin && (
+            <Link href="/orders/new" className="btn-primary text-sm whitespace-nowrap">
+              New Order
+            </Link>
+          )}
           {user ? (
             <div className="relative" ref={dropdownRef}>
               <button
@@ -78,12 +83,6 @@ export default function NavbarClient({ user, navLinks }: { user: User | null; na
               </button>
               {dropdownOpen && (
                 <div className="absolute right-0 mt-2 w-44 bg-white border border-taupe/50 rounded-xl shadow-lg z-50 overflow-hidden">
-                  {!isAdmin && (
-                    <Link href="/orders" onClick={() => setDropdownOpen(false)}
-                      className="block px-4 py-2.5 text-sm text-charcoal hover:bg-cream transition-colors">
-                      My Orders
-                    </Link>
-                  )}
                   <Link href="/settings" onClick={() => setDropdownOpen(false)}
                     className="block px-4 py-2.5 text-sm text-charcoal hover:bg-cream transition-colors">
                     Settings
@@ -116,9 +115,9 @@ export default function NavbarClient({ user, navLinks }: { user: User | null; na
             {user ? (
               <>
                 {!isAdmin && (
-                  <Link href="/orders" onClick={() => setMobileOpen(false)}
-                    className="block px-3 py-2.5 rounded-lg text-sm text-warm-gray hover:bg-taupe/20 hover:text-charcoal transition-colors">
-                    My Orders
+                  <Link href="/orders/new" onClick={() => setMobileOpen(false)}
+                    className="btn-primary text-sm text-center block mb-2">
+                    New Order
                   </Link>
                 )}
                 <Link href="/settings" onClick={() => setMobileOpen(false)}

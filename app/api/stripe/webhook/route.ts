@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
-    const { orderId, productId, productName } = session.metadata ?? {}
+    const { orderId, shopOrderId, productName } = session.metadata ?? {}
 
     if (orderId && session.payment_status === 'paid') {
       // Full custom order payment (paid in full by card)
@@ -49,21 +49,33 @@ export async function POST(req: NextRequest) {
           data: { stripeCustomerId: session.customer },
         }).catch(() => {}) // ignore unique constraint if already set
       }
-    } else if (productId && session.payment_status === 'paid') {
+    } else if (shopOrderId && session.payment_status === 'paid') {
+      const buyerEmail = session.customer_email ?? session.customer_details?.email ?? null
+
+      // Mark the recorded purchase paid. Guests have no userId, so their email is
+      // the only identifier we get, and it only arrives here from Stripe.
+      await prisma.shopOrder.update({
+        where: { id: shopOrderId },
+        data: {
+          status: 'paid',
+          paidAt: new Date(),
+          ...(buyerEmail ? { email: buyerEmail } : {}),
+        },
+      }).catch((e) => console.error('Shop order update failed:', e))
+
       // Product listing purchase, email admin
       try {
         const appUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3000').trim()
         const amount = (session.amount_total ?? 0) / 100
-        const buyerEmail = session.customer_email ?? session.customer_details?.email ?? 'Unknown'
         for (const to of await adminNotifyEmails()) {
           await sendEmail({
             to,
             subject: `New product purchase: ${productName ?? 'Product'}`,
-            htmlContent: productPurchaseAdminEmailHtml(productName ?? 'Product', amount, buyerEmail, appUrl),
+            htmlContent: productPurchaseAdminEmailHtml(productName ?? 'Product', amount, buyerEmail ?? 'Unknown', appUrl),
           })
         }
         // Email the buyer
-        if (buyerEmail && buyerEmail !== 'Unknown') {
+        if (buyerEmail) {
           await sendEmail({
             to: buyerEmail,
             subject: `Order confirmed: ${productName ?? 'Your order'}`,

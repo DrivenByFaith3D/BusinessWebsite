@@ -27,6 +27,7 @@ model User {
   addresses           Address[]
   reviews             Review[]
   bookings            Booking[]
+  shopOrders          ShopOrder[]
 }
 
 model Order {
@@ -188,6 +189,42 @@ model Review {
   createdAt DateTime @default(now())
 
   @@unique([productId, userId])
+}
+
+// A purchase from the Shop. Created as "pending" when checkout starts and marked
+// "paid" by the Stripe webhook, so the exact items and prices charged are recorded
+// without relying on Stripe metadata size limits.
+model ShopOrder {
+  id              String    @id @default(cuid())
+  orderNumber     String?   @unique
+  // Null for guest checkout: purchases are still recorded, just not tied to a login.
+  userId          String?
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  email           String?
+  status          String    @default("pending") // pending | paid | shipped | delivered | cancelled
+  total           Float
+  stripeSessionId String?   @unique
+  createdAt       DateTime  @default(now())
+  paidAt          DateTime?
+
+  items ShopOrderItem[]
+
+  @@index([userId, createdAt])
+  @@index([email])
+}
+
+// Name and price are snapshots taken at purchase time: the product may later be
+// edited or deleted, but the receipt must not change.
+model ShopOrderItem {
+  id          String    @id @default(cuid())
+  shopOrderId String
+  shopOrder   ShopOrder @relation(fields: [shopOrderId], references: [id], onDelete: Cascade)
+  productId   String?
+  name        String
+  price       Float
+  quantity    Int
+
+  @@index([shopOrderId])
 }
 
 model GalleryPhoto {
