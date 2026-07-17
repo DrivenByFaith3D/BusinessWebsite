@@ -3,7 +3,7 @@
 import Image from 'next/image'
 import { useState, useEffect, useCallback } from 'react'
 import StarRating from '@/components/StarRating'
-import { useCart } from '@/components/CartProvider'
+import { useCart, MAX_QTY } from '@/components/CartProvider'
 
 interface Product {
   id: string
@@ -94,6 +94,7 @@ export default function ProductDetailClient({
   const [active, setActive] = useState(0)
   const [zoomed, setZoomed] = useState(false)
   const [variationId, setVariationId] = useState<string | null>(null)
+  const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
   const [error, setError] = useState('')
   const { addItem } = useCart()
@@ -126,6 +127,10 @@ export default function ProductDetailClient({
   // Etsy groups by property name ("Primary color"); use it as the picker label.
   const optionName = variations[0]?.options?.[0]?.name ?? 'Option'
 
+  // Cap at what's actually in stock for the chosen option, so the cart can't hold
+  // more than can be bought.
+  const stockLimit = Math.min(MAX_QTY, selected ? selected.quantity : Infinity)
+
   function handleAddToCart() {
     if (needsChoice) {
       setError(`Please choose a ${optionName.toLowerCase()}.`)
@@ -139,6 +144,7 @@ export default function ProductDetailClient({
       imageUrl: product.imageUrl,
       variationId: selected?.id ?? null,
       variationLabel: selected?.label ?? null,
+      quantity: qty,
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 1800)
@@ -276,12 +282,52 @@ export default function ProductDetailClient({
           </div>
         )}
 
+        {!soldOut && (
+          <div className="flex items-center gap-3 mt-6">
+            <span className="text-sm font-medium text-charcoal">Quantity</span>
+            <div className="flex items-center border border-taupe/50 rounded-full overflow-hidden">
+              <button
+                onClick={() => setQty((q) => Math.max(1, q - 1))}
+                disabled={qty <= 1}
+                aria-label="Decrease quantity"
+                className="w-9 h-9 flex items-center justify-center text-charcoal hover:bg-taupe/20 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+              >
+                −
+              </button>
+              <input
+                type="number"
+                min={1}
+                max={stockLimit}
+                value={qty}
+                onChange={(e) => {
+                  const n = Math.floor(Number(e.target.value))
+                  if (!Number.isFinite(n)) return
+                  setQty(Math.min(stockLimit, Math.max(1, n)))
+                }}
+                aria-label="Quantity"
+                className="w-12 text-center text-sm font-medium text-charcoal bg-transparent border-0 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              />
+              <button
+                onClick={() => setQty((q) => Math.min(stockLimit, q + 1))}
+                disabled={qty >= stockLimit}
+                aria-label="Increase quantity"
+                className="w-9 h-9 flex items-center justify-center text-charcoal hover:bg-taupe/20 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
+              >
+                +
+              </button>
+            </div>
+            {qty > 1 && (
+              <span className="text-sm text-warm-gray">${(price * qty).toFixed(2)} total</span>
+            )}
+          </div>
+        )}
+
         <button
           onClick={handleAddToCart}
           disabled={soldOut}
-          className="btn-primary w-full mt-6 disabled:opacity-40 disabled:cursor-not-allowed"
+          className="btn-primary w-full mt-3 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {soldOut ? 'Sold out' : added ? 'Added to cart ✓' : 'Add to Cart'}
+          {soldOut ? 'Sold out' : added ? 'Added to cart ✓' : `Add ${qty > 1 ? `${qty} ` : ''}to Cart`}
         </button>
         {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
 

@@ -76,9 +76,9 @@ export default function CartDrawer() {
                   <p className="text-warm-gray">Your cart is empty</p>
                 </div>
               ) : (
-                <div className="space-y-4">
+                <div className="divide-y divide-taupe/20">
                   {items.map(item => (
-                    <div key={item.key} className="flex gap-4 items-start">
+                    <div key={item.key} className="flex gap-3 items-start py-4 first:pt-0">
                       <div className="w-16 h-16 shrink-0 rounded-lg overflow-hidden bg-taupe/20 relative">
                         {item.imageUrl ? (
                           <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />
@@ -91,30 +91,42 @@ export default function CartDrawer() {
                         )}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-charcoal truncate">{item.name}</p>
+                        {/* Wrap to two lines: these names are long and truncating
+                            to one line hid most of the product. */}
+                        <p className="text-sm font-medium text-charcoal leading-snug line-clamp-2 break-words">
+                          {item.name}
+                        </p>
                         {item.variationLabel && (
-                          <p className="text-xs text-warm-gray mt-0.5">{item.variationLabel}</p>
+                          <p className="text-xs text-warm-gray mt-1">{item.variationLabel}</p>
                         )}
-                        <p className="text-sm text-charcoal/90">${item.price.toFixed(2)}</p>
-                        <div className="flex items-center gap-2 mt-1.5">
-                          <button
-                            onClick={() => updateQuantity(item.key, item.quantity - 1)}
-                            className="w-6 h-6 rounded-full border border-taupe text-charcoal flex items-center justify-center text-xs hover:bg-taupe/20 transition-colors"
-                          >
-                            −
-                          </button>
-                          <span className="text-sm font-medium w-5 text-center">{item.quantity}</span>
-                          <button
-                            onClick={() => updateQuantity(item.key, item.quantity + 1)}
-                            className="w-6 h-6 rounded-full border border-taupe text-charcoal flex items-center justify-center text-xs hover:bg-taupe/20 transition-colors"
-                          >
-                            +
-                          </button>
+                        <p className="text-xs text-warm-gray mt-1">${item.price.toFixed(2)} each</p>
+                        <div className="flex items-center justify-between gap-2 mt-2">
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => updateQuantity(item.key, item.quantity - 1)}
+                              aria-label="Decrease quantity"
+                              className="w-6 h-6 rounded-full border border-taupe text-charcoal flex items-center justify-center text-xs hover:bg-taupe/20 transition-colors"
+                            >
+                              −
+                            </button>
+                            <span className="text-sm font-medium w-5 text-center">{item.quantity}</span>
+                            <button
+                              onClick={() => updateQuantity(item.key, item.quantity + 1)}
+                              aria-label="Increase quantity"
+                              className="w-6 h-6 rounded-full border border-taupe text-charcoal flex items-center justify-center text-xs hover:bg-taupe/20 transition-colors"
+                            >
+                              +
+                            </button>
+                          </div>
+                          <span className="text-sm font-semibold text-charcoal shrink-0">
+                            ${(item.price * item.quantity).toFixed(2)}
+                          </span>
                         </div>
                       </div>
                       <button
                         onClick={() => removeItem(item.key)}
-                        className="text-warm-gray hover:text-charcoal transition-colors mt-1"
+                        aria-label={`Remove ${item.name}`}
+                        className="text-warm-gray hover:text-charcoal transition-colors shrink-0 p-1 -mt-1 -mr-1"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                           <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />

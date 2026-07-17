@@ -22,7 +22,11 @@ export interface AddItemInput {
   imageUrl: string | null
   variationId?: string | null
   variationLabel?: string | null
+  quantity?: number
 }
+
+// Matches the server-side cap in the checkout route.
+export const MAX_QTY = 99
 
 interface CartContextType {
   items: CartItem[]
@@ -67,11 +71,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 
   const addItem = useCallback((product: AddItemInput) => {
     const key = lineKey(product.productId, product.variationId)
+    const adding = Math.max(1, Math.floor(product.quantity ?? 1))
     setItems(prev => {
       const existing = prev.find(item => item.key === key)
       if (existing) {
         return prev.map(item =>
-          item.key === key ? { ...item, quantity: item.quantity + 1 } : item
+          item.key === key
+            ? { ...item, quantity: Math.min(MAX_QTY, item.quantity + adding) }
+            : item
         )
       }
       return [...prev, {
@@ -82,7 +89,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         name: product.name,
         price: product.price,
         imageUrl: product.imageUrl,
-        quantity: 1,
+        quantity: Math.min(MAX_QTY, adding),
       }]
     })
   }, [])
@@ -96,7 +103,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       setItems(prev => prev.filter(item => item.key !== key))
     } else {
       setItems(prev => prev.map(item =>
-        item.key === key ? { ...item, quantity } : item
+        item.key === key ? { ...item, quantity: Math.min(MAX_QTY, Math.floor(quantity)) } : item
       ))
     }
   }, [])

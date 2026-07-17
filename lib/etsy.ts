@@ -177,6 +177,22 @@ export function money(m: EtsyMoney | undefined): number | null {
   return Math.round((m.amount / m.divisor) * 100) / 100
 }
 
+// TEMP: report whether a reviews endpoint is reachable and what it returns.
+export async function probeReviews(path: string) {
+  try {
+    const data = await etsyGet<{ count?: number; results?: Record<string, unknown>[] }>(path)
+    return {
+      ok: true,
+      count: data.count ?? null,
+      returned: data.results?.length ?? 0,
+      keys: data.results?.[0] ? Object.keys(data.results[0]) : null,
+      sample: data.results?.[0] ?? null,
+    }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message.slice(0, 220) : String(e) }
+  }
+}
+
 export async function resolveShopId(shopName: string): Promise<number> {
   const data = await etsyGet<{ count: number; results: { shop_id: number; shop_name: string }[] }>(
     `/shops?shop_name=${encodeURIComponent(shopName)}`,

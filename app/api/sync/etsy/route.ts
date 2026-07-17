@@ -10,6 +10,7 @@ import {
   listingPrice,
   orderedImages,
   parseVariations,
+  probeReviews,
   resolveShopId,
   shippingSummary,
 } from '@/lib/etsy'
@@ -145,6 +146,23 @@ export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET?.trim()
   if (secret && req.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
+  // TEMP: check whether Etsy exposes reviews without OAuth, and in what shape.
+  // Public listing data only; removed once the review sync is settled.
+  if (req.nextUrl.searchParams.get('probeReviews') === '1') {
+    try {
+      const shopId = await resolveShopId(etsyShopName())
+      const listings = await fetchActiveListings(shopId)
+      return NextResponse.json({
+        shopId,
+        listingId: listings[0]?.listing_id ?? null,
+        byShop: await probeReviews(`/shops/${shopId}/reviews?limit=3`),
+        byListing: await probeReviews(`/listings/${listings[0]?.listing_id}/reviews?limit=3`),
+      })
+    } catch (e) {
+      return failure(e)
+    }
   }
 
   try {
