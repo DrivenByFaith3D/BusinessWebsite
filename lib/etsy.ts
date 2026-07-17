@@ -95,17 +95,26 @@ export function listingImage(listing: EtsyListing): string | null {
   return img?.url_570xN ?? img?.url_fullxfull ?? null
 }
 
-// The public active-listings endpoint ignores `includes=Images`, so images have to
-// be fetched per listing. A missing image is not worth failing the whole sync over.
-export async function fetchListingImage(shopId: number, listingId: number): Promise<string | null> {
-  try {
-    const data = await etsyGet<{ results: { url_570xN?: string; url_fullxfull?: string }[] }>(
-      `/shops/${shopId}/listings/${listingId}/images`,
-    )
-    const img = data.results?.[0]
-    return img?.url_570xN ?? img?.url_fullxfull ?? null
-  } catch (e) {
-    console.error(`ETSY_IMG_ERR listing=${listingId} ::`, e instanceof Error ? e.message : String(e))
-    return null
+// The active-listings endpoint ignores `includes=Images`, but the batch lookup
+// honours it. Fetch in chunks of 100 rather than per listing. Images are cosmetic,
+// so a failure here degrades to "no image" instead of failing the sync.
+export async function fetchImagesFor(listingIds: number[]): Promise<Map<number, string>> {
+  const images = new Map<number, string>()
+
+  for (let i = 0; i < listingIds.length; i += 100) {
+    const chunk = listingIds.slice(i, i + 100)
+    try {
+      const data = await etsyGet<{ results: EtsyListing[] }>(
+        `/listings/batch?listing_ids=${chunk.join(',')}&includes=Images`,
+      )
+      for (const listing of data.results ?? []) {
+        const url = listingImage(listing)
+        if (url) images.set(listing.listing_id, url)
+      }
+    } catch (e) {
+      console.error('ETSY_IMG_ERR ::', e instanceof Error ? e.message : String(e))
+    }
   }
+
+  return images
 }
