@@ -175,6 +175,12 @@ model Product {
   inStock     Boolean  @default(true)
   createdAt   DateTime @default(now())
 
+  // Set only on products pulled from Etsy. Products created by hand keep this
+  // null and are never touched by the sync.
+  etsyListingId String?   @unique
+  etsyUrl       String?
+  etsySyncedAt  DateTime?
+
   reviews     Review[]
 }
 

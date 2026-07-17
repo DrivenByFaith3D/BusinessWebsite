@@ -24,6 +24,30 @@ export default function AdminProductsClient({ initialProducts }: { initialProduc
   const [form, setForm] = useState(EMPTY_FORM)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [syncing, setSyncing] = useState(false)
+  const [syncMessage, setSyncMessage] = useState('')
+
+  async function syncEtsy() {
+    setSyncing(true)
+    setSyncMessage('')
+    try {
+      const res = await fetch('/api/sync/etsy', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) {
+        setSyncMessage(data.error || 'Sync failed.')
+      } else {
+        setSyncMessage(
+          `Synced ${data.total} listing${data.total === 1 ? '' : 's'}: ${data.created} new, ${data.updated} updated, ${data.deactivated} hidden.`,
+        )
+        // Reload so the grid reflects what the sync just wrote.
+        window.location.reload()
+      }
+    } catch {
+      setSyncMessage('Network error. Please try again.')
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   function openCreate() {
     setForm(EMPTY_FORM)
@@ -143,7 +167,23 @@ export default function AdminProductsClient({ initialProducts }: { initialProduc
 
       {/* Toolbar */}
       {!showForm && (
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-end items-center gap-3 mb-4">
+          {syncMessage && (
+            <p className={`text-xs ${syncMessage.startsWith('Synced') ? 'text-green-700' : 'text-red-600'}`}>
+              {syncMessage}
+            </p>
+          )}
+          <button
+            onClick={syncEtsy}
+            disabled={syncing}
+            className="btn-secondary flex items-center gap-2 disabled:opacity-50"
+            title="Pull the latest active listings from Etsy"
+          >
+            <svg className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            {syncing ? 'Syncing…' : 'Sync from Etsy'}
+          </button>
           <button onClick={openCreate} className="btn-primary flex items-center gap-2">
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />

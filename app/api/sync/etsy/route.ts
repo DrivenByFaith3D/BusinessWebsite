@@ -1,0 +1,107 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { prisma } from '@/lib/prisma'
+import {
+  EtsyNotConfiguredError,
+  etsyShopName,
+  fetchActiveListings,
+  listingImage,
+  listingPrice,
+  resolveShopId,
+} from '@/lib/etsy'
+
+export const dynamic = 'force-dynamic'
+export const maxDuration = 60
+
+interface SyncResult {
+  created: number
+  updated: number
+  deactivated: number
+  total: number
+}
+
+async function runSync(): Promise<SyncResult> {
+  const shopId = await resolveShopId(etsyShopName())
+  const listings = await fetchActiveListings(shopId)
+
+  const seen: string[] = []
+  let created = 0
+  let updated = 0
+
+  for (const listing of listings) {
+    const etsyListingId = String(listing.listing_id)
+    seen.push(etsyListingId)
+
+    const data = {
+      name: listing.title,
+      description: listing.description,
+      price: listingPrice(listing),
+      imageUrl: listingImage(listing),
+      // Etsy's "active" listings can still be sold out.
+      inStock: listing.quantity > 0,
+      etsyUrl: listing.url,
+      etsySyncedAt: new Date(),
+    }
+
+    const existing = await prisma.product.findUnique({ where: { etsyListingId } })
+    if (existing) {
+      await prisma.product.update({ where: { etsyListingId }, data })
+      updated++
+    } else {
+      await prisma.product.create({ data: { ...data, etsyListingId } })
+      created++
+    }
+  }
+
+  // Anything previously pulled from Etsy that is no longer active gets hidden
+  // rather than deleted, so past orders and reviews keep their product.
+  // Hand-made products (etsyListingId null) are never touched.
+  const { count: deactivated } = await prisma.product.updateMany({
+    where: {
+      etsyListingId: { not: null, notIn: seen },
+      inStock: true,
+    },
+    data: { inStock: false },
+  })
+
+  return { created, updated, deactivated, total: listings.length }
+}
+
+function failure(e: unknown) {
+  if (e instanceof EtsyNotConfiguredError) {
+    return NextResponse.json(
+      { error: `${e.message}. Add it to the project's environment variables.` },
+      { status: 503 },
+    )
+  }
+  const message = e instanceof Error ? e.message : 'Etsy sync failed'
+  console.error('Etsy sync failed:', message)
+  return NextResponse.json({ error: message }, { status: 502 })
+}
+
+// Scheduled run (Vercel Cron). Protected by CRON_SECRET when one is configured.
+export async function GET(req: NextRequest) {
+  const secret = process.env.CRON_SECRET?.trim()
+  if (secret && req.headers.get('authorization') !== `Bearer ${secret}`) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+  try {
+    return NextResponse.json({ ok: true, ...(await runSync()) })
+  } catch (e) {
+    return failure(e)
+  }
+}
+
+// Manual "Sync now" from the admin products page.
+export async function POST() {
+  const session = await getServerSession(authOptions)
+  if (!session || session.user.role !== 'admin') {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+  }
+  try {
+    return NextResponse.json({ ok: true, ...(await runSync()) })
+  } catch (e) {
+    return failure(e)
+  }
+}
