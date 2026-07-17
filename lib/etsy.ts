@@ -13,10 +13,14 @@ export class EtsyNotConfiguredError extends Error {
   }
 }
 
-function keystring(): string {
+// Etsy rejects the keystring on its own ("Shared secret is required in x-api-key
+// header"), so the header is keystring:sharedSecret.
+function apiKey(): string {
   const key = process.env.ETSY_KEYSTRING?.trim()
   if (!key) throw new EtsyNotConfiguredError('ETSY_KEYSTRING')
-  return key
+  const secret = process.env.ETSY_SHARED_SECRET?.trim()
+  if (!secret) throw new EtsyNotConfiguredError('ETSY_SHARED_SECRET')
+  return `${key}:${secret}`
 }
 
 export function etsyShopName(): string {
@@ -27,7 +31,7 @@ export function etsyShopName(): string {
 
 async function etsyGet<T>(path: string): Promise<T> {
   const res = await fetch(`${ETSY_API}${path}`, {
-    headers: { 'x-api-key': keystring() },
+    headers: { 'x-api-key': apiKey() },
     cache: 'no-store',
   })
   if (!res.ok) {
