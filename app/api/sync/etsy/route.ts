@@ -6,6 +6,7 @@ import {
   EtsyNotConfiguredError,
   etsyShopName,
   fetchActiveListings,
+  fetchListingImage,
   listingImage,
   listingPrice,
   resolveShopId,
@@ -37,7 +38,7 @@ async function runSync(): Promise<SyncResult> {
       name: listing.title,
       description: listing.description,
       price: listingPrice(listing),
-      imageUrl: listingImage(listing),
+      imageUrl: listingImage(listing) ?? (await fetchListingImage(shopId, listing.listing_id)),
       // Etsy's "active" listings can still be sold out.
       inStock: listing.quantity > 0,
       etsyUrl: listing.url,

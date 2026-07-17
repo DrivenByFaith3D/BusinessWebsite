@@ -71,7 +71,7 @@ export async function fetchActiveListings(shopId: number): Promise<EtsyListing[]
 
   for (;;) {
     const page = await etsyGet<{ count: number; results: EtsyListing[] }>(
-      `/shops/${shopId}/listings/active?limit=${limit}&offset=${offset}&includes=Images`,
+      `/shops/${shopId}/listings/active?limit=${limit}&offset=${offset}`,
     )
     const results = page.results ?? []
     all.push(...results)
@@ -93,4 +93,19 @@ export function listingPrice(listing: EtsyListing): number {
 export function listingImage(listing: EtsyListing): string | null {
   const img = listing.images?.[0]
   return img?.url_570xN ?? img?.url_fullxfull ?? null
+}
+
+// The public active-listings endpoint ignores `includes=Images`, so images have to
+// be fetched per listing. A missing image is not worth failing the whole sync over.
+export async function fetchListingImage(shopId: number, listingId: number): Promise<string | null> {
+  try {
+    const data = await etsyGet<{ results: { url_570xN?: string; url_fullxfull?: string }[] }>(
+      `/shops/${shopId}/listings/${listingId}/images`,
+    )
+    const img = data.results?.[0]
+    return img?.url_570xN ?? img?.url_fullxfull ?? null
+  } catch (e) {
+    console.error(`Etsy image fetch failed for listing ${listingId}:`, e)
+    return null
+  }
 }
