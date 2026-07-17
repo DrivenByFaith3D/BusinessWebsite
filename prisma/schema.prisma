@@ -181,7 +181,8 @@ model Product {
   etsyUrl       String?
   etsySyncedAt  DateTime?
 
-  // Shipping, mirrored from the listing's Etsy shipping profile.
+  // Shipping. processingMin/Max come from the listing itself, not the shipping
+  // profile, which leaves them unset.
   processingMin Int?
   processingMax Int?
   shipsFrom     String?
@@ -189,8 +190,45 @@ model Product {
   shippingMinDays Int?
   shippingMaxDays Int?
 
+  // Listing detail mirrored from Etsy.
+  tags          String[] @default([])
+  materials     String[] @default([])
+  whoMade       String?  // e.g. "i_did"
+  whenMade      String?  // e.g. "made_to_order"
+  itemWeight    Float?
+  itemWeightUnit String?
+  itemLength    Float?
+  itemWidth     Float?
+  itemHeight    Float?
+  itemDimensionsUnit String?
+  isPersonalizable Boolean @default(false)
+  personalizationInstructions String?
+  numFavorers   Int?
+  etsyViews     Int?
+  hasVariations Boolean @default(false)
+
   images      ProductImage[]
+  variations  ProductVariation[]
   reviews     Review[]
+}
+
+// A buyable combination from the listing's Etsy inventory, e.g. Primary color:
+// Army Blue. Options are stored as [{ name, value }] because Etsy lets a listing
+// vary on arbitrary properties, not just colour.
+model ProductVariation {
+  id            String  @id @default(cuid())
+  productId     String
+  product       Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  etsyProductId String?
+  sku           String?
+  price         Float?
+  quantity      Int     @default(0)
+  isEnabled     Boolean @default(true)
+  label         String  // flattened for display, e.g. "Army Blue"
+  options       Json    @default("[]")
+  rank          Int     @default(0)
+
+  @@index([productId, rank])
 }
 
 // Every image on a listing, ordered as Etsy ranks them. Product.imageUrl stays as
@@ -249,6 +287,9 @@ model ShopOrderItem {
   shopOrder   ShopOrder @relation(fields: [shopOrderId], references: [id], onDelete: Cascade)
   productId   String?
   name        String
+  // Which variation was bought, e.g. "Army Blue". Snapshotted like name/price so
+  // the order always records what was actually ordered.
+  variation   String?
   price       Float
   quantity    Int
 

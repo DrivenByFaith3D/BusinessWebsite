@@ -54,6 +54,7 @@ export interface EtsyImage {
 }
 
 export interface EtsyShippingDestination {
+  origin_country_iso?: string | null
   destination_country_iso?: string | null
   destination_region?: string | null
   primary_cost?: EtsyMoney
@@ -69,6 +70,36 @@ export interface EtsyShippingProfile {
   shipping_profile_destinations?: EtsyShippingDestination[]
 }
 
+export interface EtsyPropertyValue {
+  property_id?: number
+  property_name?: string
+  values?: string[]
+}
+
+export interface EtsyOffering {
+  quantity?: number
+  is_enabled?: boolean
+  is_deleted?: boolean
+  price?: EtsyMoney
+}
+
+export interface EtsyInventoryProduct {
+  product_id?: number
+  sku?: string | null
+  is_deleted?: boolean
+  offerings?: EtsyOffering[]
+  property_values?: EtsyPropertyValue[]
+}
+
+export interface EtsyInventory {
+  products?: EtsyInventoryProduct[]
+}
+
+export interface EtsyPersonalization {
+  is_personalizable?: boolean
+  personalization_instructions?: string | null
+}
+
 export interface EtsyListing {
   listing_id: number
   title: string
@@ -79,6 +110,66 @@ export interface EtsyListing {
   price: EtsyMoney
   images?: EtsyImage[]
   shipping_profile?: EtsyShippingProfile | null
+  inventory?: EtsyInventory | null
+  personalization?: EtsyPersonalization | null
+
+  tags?: string[]
+  materials?: string[]
+  who_made?: string | null
+  when_made?: string | null
+  has_variations?: boolean
+  is_personalizable?: boolean
+  num_favorers?: number | null
+  views?: number | null
+  // Processing time lives on the listing; the shipping profile leaves it unset.
+  processing_min?: number | null
+  processing_max?: number | null
+  item_weight?: number | null
+  item_weight_unit?: string | null
+  item_length?: number | null
+  item_width?: number | null
+  item_height?: number | null
+  item_dimensions_unit?: string | null
+}
+
+export interface ParsedVariation {
+  etsyProductId: string | null
+  sku: string | null
+  price: number | null
+  quantity: number
+  isEnabled: boolean
+  label: string
+  options: { name: string; value: string }[]
+}
+
+// Etsy models each buyable combination as an inventory "product" with property
+// values (Primary color: Army Blue) and offerings (price/quantity).
+export function parseVariations(listing: EtsyListing | undefined): ParsedVariation[] {
+  const products = listing?.inventory?.products ?? []
+  const out: ParsedVariation[] = []
+
+  for (const p of products) {
+    if (p.is_deleted) continue
+    const offering = (p.offerings ?? []).find((o) => !o.is_deleted) ?? p.offerings?.[0]
+
+    const options = (p.property_values ?? [])
+      .map((pv) => ({ name: pv.property_name ?? '', value: (pv.values ?? []).join(', ') }))
+      .filter((o) => o.name && o.value)
+
+    if (options.length === 0) continue // no properties means there is nothing to choose
+
+    out.push({
+      etsyProductId: p.product_id != null ? String(p.product_id) : null,
+      sku: p.sku ?? null,
+      price: money(offering?.price),
+      quantity: offering?.quantity ?? 0,
+      isEnabled: offering?.is_enabled !== false,
+      label: options.map((o) => o.value).join(' / '),
+      options,
+    })
+  }
+
+  return out
 }
 
 export function money(m: EtsyMoney | undefined): number | null {
@@ -160,20 +251,19 @@ export function orderedImages(listing: EtsyListing | undefined): { url: string; 
     .filter((img) => img.url)
 }
 
-// Etsy models shipping per destination. Surface the cheapest as the headline
-// figure, preferring the origin country so a domestic buyer sees a domestic rate.
-export function shippingSummary(listing: EtsyListing | undefined) {
-  const profile = listing?.shipping_profile
-  if (!profile) return null
-
-  const destinations = profile.shipping_profile_destinations ?? []
-  const origin = profile.origin_country_iso ?? null
+// Etsy models shipping per destination. Prefer the origin country so a domestic
+// buyer sees a domestic rate. Processing time is read from the listing (and only
+// falls back to the profile), because the profile leaves it unset.
+export function shippingSummary(base: EtsyListing, detail: EtsyListing | undefined) {
+  const profile = detail?.shipping_profile
+  const destinations = profile?.shipping_profile_destinations ?? []
+  const origin = profile?.origin_country_iso ?? destinations[0]?.origin_country_iso ?? null
   const preferred =
     destinations.find((d) => origin && d.destination_country_iso === origin) ?? destinations[0]
 
   return {
-    processingMin: profile.min_processing_days ?? null,
-    processingMax: profile.max_processing_days ?? null,
+    processingMin: base.processing_min ?? profile?.min_processing_days ?? null,
+    processingMax: base.processing_max ?? profile?.max_processing_days ?? null,
     shipsFrom: origin,
     shippingCost: money(preferred?.primary_cost) ?? null,
     shippingMinDays: preferred?.min_delivery_days ?? null,

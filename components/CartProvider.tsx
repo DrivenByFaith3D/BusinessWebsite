@@ -2,19 +2,33 @@
 
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 
-interface CartItem {
-  id: string
+export interface CartItem {
+  // Cart line key. A product with variations can appear more than once (one line
+  // per colour), so the product id alone is not enough to identify a line.
+  key: string
+  productId: string
+  variationId: string | null
+  variationLabel: string | null
   name: string
   price: number
   imageUrl: string | null
   quantity: number
 }
 
+export interface AddItemInput {
+  productId: string
+  name: string
+  price: number
+  imageUrl: string | null
+  variationId?: string | null
+  variationLabel?: string | null
+}
+
 interface CartContextType {
   items: CartItem[]
-  addItem: (product: { id: string; name: string; price: number; imageUrl: string | null }) => void
-  removeItem: (id: string) => void
-  updateQuantity: (id: string, quantity: number) => void
+  addItem: (product: AddItemInput) => void
+  removeItem: (key: string) => void
+  updateQuantity: (key: string, quantity: number) => void
   clearCart: () => void
   totalItems: number
   totalPrice: number
@@ -24,6 +38,8 @@ const CartContext = createContext<CartContextType | null>(null)
 
 const CART_KEY = 'dbf3d_cart'
 
+const lineKey = (productId: string, variationId?: string | null) => `${productId}::${variationId ?? ''}`
+
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -32,7 +48,12 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     try {
       const saved = localStorage.getItem(CART_KEY)
-      if (saved) setItems(JSON.parse(saved))
+      if (saved) {
+        const parsed = JSON.parse(saved)
+        // Drop anything saved before variations existed rather than trying to
+        // migrate a half-known shape into a checkout.
+        setItems(Array.isArray(parsed) ? parsed.filter((i) => i && i.productId && i.key) : [])
+      }
     } catch {}
     setLoaded(true)
   }, [])
@@ -44,28 +65,38 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     }
   }, [items, loaded])
 
-  const addItem = useCallback((product: { id: string; name: string; price: number; imageUrl: string | null }) => {
+  const addItem = useCallback((product: AddItemInput) => {
+    const key = lineKey(product.productId, product.variationId)
     setItems(prev => {
-      const existing = prev.find(item => item.id === product.id)
+      const existing = prev.find(item => item.key === key)
       if (existing) {
         return prev.map(item =>
-          item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item
+          item.key === key ? { ...item, quantity: item.quantity + 1 } : item
         )
       }
-      return [...prev, { ...product, quantity: 1 }]
+      return [...prev, {
+        key,
+        productId: product.productId,
+        variationId: product.variationId ?? null,
+        variationLabel: product.variationLabel ?? null,
+        name: product.name,
+        price: product.price,
+        imageUrl: product.imageUrl,
+        quantity: 1,
+      }]
     })
   }, [])
 
-  const removeItem = useCallback((id: string) => {
-    setItems(prev => prev.filter(item => item.id !== id))
+  const removeItem = useCallback((key: string) => {
+    setItems(prev => prev.filter(item => item.key !== key))
   }, [])
 
-  const updateQuantity = useCallback((id: string, quantity: number) => {
+  const updateQuantity = useCallback((key: string, quantity: number) => {
     if (quantity <= 0) {
-      setItems(prev => prev.filter(item => item.id !== id))
+      setItems(prev => prev.filter(item => item.key !== key))
     } else {
       setItems(prev => prev.map(item =>
-        item.id === id ? { ...item, quantity } : item
+        item.key === key ? { ...item, quantity } : item
       ))
     }
   }, [])
@@ -83,7 +114,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function useCart() {
-  const context = useContext(CartContext)
-  if (!context) throw new Error('useCart must be used within CartProvider')
-  return context
+  const ctx = useContext(CartContext)
+  if (!ctx) throw new Error('useCart must be used within a CartProvider')
+  return ctx
 }

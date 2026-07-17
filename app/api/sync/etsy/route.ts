@@ -9,6 +9,7 @@ import {
   fetchListingDetails,
   listingPrice,
   orderedImages,
+  parseVariations,
   resolveShopId,
   shippingSummary,
 } from '@/lib/etsy'
@@ -38,7 +39,8 @@ async function runSync(): Promise<SyncResult> {
 
     const detail = details.get(listing.listing_id)
     const gallery = orderedImages(detail)
-    const shipping = shippingSummary(detail)
+    const shipping = shippingSummary(listing, detail)
+    const variations = parseVariations(detail)
 
     const data = {
       name: listing.title,
@@ -50,12 +52,28 @@ async function runSync(): Promise<SyncResult> {
       inStock: listing.quantity > 0,
       etsyUrl: listing.url,
       etsySyncedAt: new Date(),
-      processingMin: shipping?.processingMin ?? null,
-      processingMax: shipping?.processingMax ?? null,
-      shipsFrom: shipping?.shipsFrom ?? null,
-      shippingCost: shipping?.shippingCost ?? null,
-      shippingMinDays: shipping?.shippingMinDays ?? null,
-      shippingMaxDays: shipping?.shippingMaxDays ?? null,
+      processingMin: shipping.processingMin,
+      processingMax: shipping.processingMax,
+      shipsFrom: shipping.shipsFrom,
+      shippingCost: shipping.shippingCost,
+      shippingMinDays: shipping.shippingMinDays,
+      shippingMaxDays: shipping.shippingMaxDays,
+      tags: listing.tags ?? [],
+      materials: listing.materials ?? [],
+      whoMade: listing.who_made ?? null,
+      whenMade: listing.when_made ?? null,
+      itemWeight: listing.item_weight ?? null,
+      itemWeightUnit: listing.item_weight_unit ?? null,
+      itemLength: listing.item_length ?? null,
+      itemWidth: listing.item_width ?? null,
+      itemHeight: listing.item_height ?? null,
+      itemDimensionsUnit: listing.item_dimensions_unit ?? null,
+      isPersonalizable:
+        detail?.personalization?.is_personalizable ?? listing.is_personalizable ?? false,
+      personalizationInstructions: detail?.personalization?.personalization_instructions ?? null,
+      numFavorers: listing.num_favorers ?? null,
+      etsyViews: listing.views ?? null,
+      hasVariations: variations.length > 0,
     }
 
     const existing = await prisma.product.findUnique({ where: { etsyListingId } })
@@ -64,8 +82,8 @@ async function runSync(): Promise<SyncResult> {
       : await prisma.product.create({ data: { ...data, etsyListingId } })
     existing ? updated++ : created++
 
-    // Replace the gallery wholesale: Etsy is the source of truth, and reconciling
-    // individual images is not worth the complexity for a handful of rows.
+    // Replace gallery and variations wholesale: Etsy is the source of truth, and
+    // reconciling individual rows is not worth the complexity at this size.
     if (gallery.length > 0) {
       await prisma.productImage.deleteMany({ where: { productId: product.id } })
       await prisma.productImage.createMany({
@@ -73,6 +91,23 @@ async function runSync(): Promise<SyncResult> {
           productId: product.id,
           url: img.url,
           fullUrl: img.fullUrl,
+          rank,
+        })),
+      })
+    }
+
+    await prisma.productVariation.deleteMany({ where: { productId: product.id } })
+    if (variations.length > 0) {
+      await prisma.productVariation.createMany({
+        data: variations.map((v, rank) => ({
+          productId: product.id,
+          etsyProductId: v.etsyProductId,
+          sku: v.sku,
+          price: v.price,
+          quantity: v.quantity,
+          isEnabled: v.isEnabled,
+          label: v.label,
+          options: v.options,
           rank,
         })),
       })
@@ -110,24 +145,6 @@ export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET?.trim()
   if (secret && req.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  // TEMP: dump the raw Etsy payload so the sync can be built against every field
-  // the API actually returns. Listing data is already public on Etsy; no secrets
-  // are involved. Remove once the full sync is in place.
-  if (req.nextUrl.searchParams.get('raw') === '1') {
-    try {
-      const shopId = await resolveShopId(etsyShopName())
-      const listings = await fetchActiveListings(shopId)
-      const details = await fetchListingDetails(listings.map((l) => l.listing_id))
-      return NextResponse.json({
-        baseKeys: Object.keys(listings[0] ?? {}),
-        base: listings[0] ?? null,
-        detail: details.get(listings[0]?.listing_id) ?? null,
-      })
-    } catch (e) {
-      return failure(e)
-    }
   }
 
   try {

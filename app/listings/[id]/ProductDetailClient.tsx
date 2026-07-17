@@ -19,6 +19,28 @@ interface Product {
   shippingCost: number | null
   shippingMinDays: number | null
   shippingMaxDays: number | null
+  tags: string[]
+  materials: string[]
+  whoMade: string | null
+  whenMade: string | null
+  itemWeight: number | null
+  itemWeightUnit: string | null
+  itemLength: number | null
+  itemWidth: number | null
+  itemHeight: number | null
+  itemDimensionsUnit: string | null
+  isPersonalizable: boolean
+  personalizationInstructions: string | null
+  numFavorers: number | null
+}
+
+interface Variation {
+  id: string
+  label: string
+  price: number | null
+  quantity: number
+  isEnabled: boolean
+  options: { name: string; value: string }[]
 }
 
 interface Review {
@@ -31,6 +53,18 @@ interface Review {
 
 const REGION: Record<string, string> = { US: 'the United States', GB: 'the United Kingdom', CA: 'Canada', AU: 'Australia' }
 
+// Etsy sends these as enum-ish slugs.
+const WHO_MADE: Record<string, string> = {
+  i_did: 'Handmade by the shop owner',
+  someone_else: 'Made by another company',
+  collective: 'Made by a design partnership',
+}
+const WHEN_MADE: Record<string, string> = {
+  made_to_order: 'Made to order',
+  '2020_2025': 'Made 2020-2025',
+  '2010_2019': 'Made 2010-2019',
+}
+
 function dayRange(min: number | null, max: number | null): string | null {
   if (min == null && max == null) return null
   if (min != null && max != null) return min === max ? `${min} day${min === 1 ? '' : 's'}` : `${min}-${max} days`
@@ -41,25 +75,49 @@ function dayRange(min: number | null, max: number | null): string | null {
 export default function ProductDetailClient({
   product,
   images,
+  variations,
   avgRating,
   reviewCount,
   reviews,
 }: {
   product: Product
   images: { id: string; url: string }[]
+  variations: Variation[]
   avgRating: number | null
   reviewCount: number
   isLoggedIn: boolean
   reviews: Review[]
 }) {
-  // Fall back to the thumbnail so hand-made products without a gallery still show.
   const gallery = images.length > 0 ? images : product.imageUrl ? [{ id: 'main', url: product.imageUrl }] : []
+  const buyable = variations.filter((v) => v.isEnabled && v.quantity > 0)
+
   const [active, setActive] = useState(0)
+  const [variationId, setVariationId] = useState<string | null>(null)
   const [added, setAdded] = useState(false)
+  const [error, setError] = useState('')
   const { addItem } = useCart()
 
+  const selected = variations.find((v) => v.id === variationId) ?? null
+  // Variations can carry their own price, so the headline follows the selection.
+  const price = selected?.price ?? product.price
+  const needsChoice = variations.length > 0 && !selected
+  // Etsy groups by property name ("Primary color"); use it as the picker label.
+  const optionName = variations[0]?.options?.[0]?.name ?? 'Option'
+
   function handleAddToCart() {
-    addItem({ id: product.id, name: product.name, price: product.price, imageUrl: product.imageUrl })
+    if (needsChoice) {
+      setError(`Please choose a ${optionName.toLowerCase()}.`)
+      return
+    }
+    setError('')
+    addItem({
+      productId: product.id,
+      name: product.name,
+      price,
+      imageUrl: product.imageUrl,
+      variationId: selected?.id ?? null,
+      variationLabel: selected?.label ?? null,
+    })
     setAdded(true)
     setTimeout(() => setAdded(false), 1800)
   }
@@ -67,6 +125,22 @@ export default function ProductDetailClient({
   const processing = dayRange(product.processingMin, product.processingMax)
   const delivery = dayRange(product.shippingMinDays, product.shippingMaxDays)
   const hasShipping = processing || delivery || product.shippingCost != null || product.shipsFrom
+
+  const dims =
+    product.itemLength && product.itemWidth && product.itemHeight
+      ? `${product.itemLength} × ${product.itemWidth} × ${product.itemHeight} ${product.itemDimensionsUnit ?? ''}`.trim()
+      : null
+  const weight =
+    product.itemWeight != null ? `${product.itemWeight} ${product.itemWeightUnit ?? ''}`.trim() : null
+
+  const details: [string, string][] = []
+  if (product.whoMade) details.push(['Made by', WHO_MADE[product.whoMade] ?? product.whoMade])
+  if (product.whenMade) details.push(['Availability', WHEN_MADE[product.whenMade] ?? product.whenMade.replace(/_/g, ' ')])
+  if (dims) details.push(['Dimensions', dims])
+  if (weight) details.push(['Weight', weight])
+  if (product.materials.length > 0) details.push(['Materials', product.materials.join(', ')])
+
+  const soldOut = !product.inStock || (variations.length > 0 && buyable.length === 0)
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -107,13 +181,16 @@ export default function ProductDetailClient({
       <div>
         <h1 className="text-2xl font-bold text-charcoal leading-snug">{product.name}</h1>
 
-        <div className="flex items-center gap-3 mt-3">
-          <span className="text-2xl font-display text-charcoal">${product.price.toFixed(2)}</span>
-          {product.inStock ? (
-            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700">In stock</span>
-          ) : (
+        <div className="flex items-center gap-3 mt-3 flex-wrap">
+          <span className="text-2xl font-display text-charcoal">${price.toFixed(2)}</span>
+          {soldOut ? (
             <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-red-50 text-red-600">Sold out</span>
+          ) : (
+            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-green-100 text-green-700">In stock</span>
           )}
+          {product.numFavorers ? (
+            <span className="text-xs text-warm-gray">♥ {product.numFavorers} favorites on Etsy</span>
+          ) : null}
         </div>
 
         {avgRating != null && reviewCount > 0 && (
@@ -123,13 +200,57 @@ export default function ProductDetailClient({
           </div>
         )}
 
+        {/* Variations */}
+        {variations.length > 0 && (
+          <div className="mt-6">
+            <p className="text-sm font-medium text-charcoal mb-2">
+              {optionName}
+              {selected && <span className="text-warm-gray font-normal">: {selected.label}</span>}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {variations.map((v) => {
+                const disabled = !v.isEnabled || v.quantity < 1
+                return (
+                  <button
+                    key={v.id}
+                    onClick={() => { setVariationId(v.id); setError('') }}
+                    disabled={disabled}
+                    className={`px-3.5 py-2 rounded-full border text-sm transition-all ${
+                      v.id === variationId
+                        ? 'bg-charcoal text-white border-charcoal'
+                        : disabled
+                        ? 'border-taupe/30 text-warm-gray/50 line-through cursor-not-allowed'
+                        : 'bg-white text-charcoal border-taupe/50 hover:border-charcoal'
+                    }`}
+                  >
+                    {v.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {product.isPersonalizable && (
+          <div className="mt-4 rounded-lg bg-taupe/15 border border-taupe/40 px-3 py-2.5">
+            <p className="text-sm text-charcoal font-medium">Personalization available</p>
+            {product.personalizationInstructions && (
+              <p className="text-xs text-warm-gray mt-1">{product.personalizationInstructions}</p>
+            )}
+            <p className="text-xs text-warm-gray mt-1">
+              Add your details in the order notes, or message us after checkout.
+            </p>
+          </div>
+        )}
+
         <button
           onClick={handleAddToCart}
-          disabled={!product.inStock}
+          disabled={soldOut}
           className="btn-primary w-full mt-6 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          {!product.inStock ? 'Sold out' : added ? 'Added to cart ✓' : 'Add to Cart'}
+          {soldOut ? 'Sold out' : added ? 'Added to cart ✓' : 'Add to Cart'}
         </button>
+        {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
 
         {/* Shipping */}
         {hasShipping && (
@@ -166,11 +287,38 @@ export default function ProductDetailClient({
           </div>
         )}
 
+        {/* Item details */}
+        {details.length > 0 && (
+          <div className="card p-5 mt-4">
+            <h2 className="text-xs font-semibold text-warm-gray uppercase tracking-wide mb-3">Item Details</h2>
+            <dl className="space-y-2 text-sm">
+              {details.map(([label, value]) => (
+                <div key={label} className="flex justify-between gap-4">
+                  <dt className="text-warm-gray shrink-0">{label}</dt>
+                  <dd className="text-charcoal font-medium text-right">{value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
+
         {/* Description */}
         {product.description && (
           <div className="mt-6">
             <h2 className="text-xs font-semibold text-warm-gray uppercase tracking-wide mb-2">Description</h2>
             <p className="text-sm text-charcoal/85 whitespace-pre-wrap leading-relaxed">{product.description}</p>
+          </div>
+        )}
+
+        {/* Tags */}
+        {product.tags.length > 0 && (
+          <div className="mt-6">
+            <h2 className="text-xs font-semibold text-warm-gray uppercase tracking-wide mb-2">Tags</h2>
+            <div className="flex flex-wrap gap-1.5">
+              {product.tags.map((t) => (
+                <span key={t} className="text-xs px-2.5 py-1 rounded-full bg-taupe/20 text-warm-gray">{t}</span>
+              ))}
+            </div>
           </div>
         )}
 

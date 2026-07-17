@@ -13,6 +13,8 @@ interface Product {
   description: string | null
   price: number
   imageUrl: string | null
+  hasVariations?: boolean
+  inStock?: boolean
 }
 
 export default function ProductCard({ product, avgRating, reviewCount, isLoggedIn }: {
@@ -27,7 +29,7 @@ export default function ProductCard({ product, avgRating, reviewCount, isLoggedI
 
   function handleAddToCart() {
     addItem({
-      id: product.id,
+      productId: product.id,
       name: product.name,
       price: product.price,
       imageUrl: product.imageUrl,
@@ -65,12 +67,21 @@ export default function ProductCard({ product, avgRating, reviewCount, isLoggedI
         ) : null}
         <div className="flex items-center justify-between mt-3 gap-3">
           <p className="text-charcoal font-bold text-lg">${product.price.toFixed(2)}</p>
-          <button
-            onClick={handleAddToCart}
-            className="btn-primary text-sm py-1.5 px-4 shrink-0"
-          >
-            {added ? 'Added!' : 'Add to Cart'}
-          </button>
+          {product.hasVariations ? (
+            // Options must be chosen before this can go in the cart, so send the
+            // buyer to the detail page rather than guessing a variation for them.
+            <Link href={`/listings/${product.id}`} className="btn-primary text-sm py-1.5 px-4 shrink-0">
+              Choose options
+            </Link>
+          ) : (
+            <button
+              onClick={handleAddToCart}
+              disabled={product.inStock === false}
+              className="btn-primary text-sm py-1.5 px-4 shrink-0 disabled:opacity-40"
+            >
+              {product.inStock === false ? 'Sold out' : added ? 'Added!' : 'Add to Cart'}
+            </button>
+          )}
         </div>
         <button
           onClick={() => setShowReviews(v => !v)}

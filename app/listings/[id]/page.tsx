@@ -15,6 +15,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     where: { id },
     include: {
       images: { orderBy: { rank: 'asc' } },
+      variations: { orderBy: { rank: 'asc' } },
       reviews: { include: { user: { select: { name: true, email: true } } }, orderBy: { createdAt: 'desc' } },
     },
   })
@@ -50,7 +51,28 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           shippingCost: product.shippingCost,
           shippingMinDays: product.shippingMinDays,
           shippingMaxDays: product.shippingMaxDays,
+          tags: product.tags,
+          materials: product.materials,
+          whoMade: product.whoMade,
+          whenMade: product.whenMade,
+          itemWeight: product.itemWeight,
+          itemWeightUnit: product.itemWeightUnit,
+          itemLength: product.itemLength,
+          itemWidth: product.itemWidth,
+          itemHeight: product.itemHeight,
+          itemDimensionsUnit: product.itemDimensionsUnit,
+          isPersonalizable: product.isPersonalizable,
+          personalizationInstructions: product.personalizationInstructions,
+          numFavorers: product.numFavorers,
         }}
+        variations={product.variations.map((v) => ({
+          id: v.id,
+          label: v.label,
+          price: v.price,
+          quantity: v.quantity,
+          isEnabled: v.isEnabled,
+          options: v.options as { name: string; value: string }[],
+        }))}
         images={product.images.map((i) => ({ id: i.id, url: i.url }))}
         avgRating={avgRating}
         reviewCount={reviewCount}

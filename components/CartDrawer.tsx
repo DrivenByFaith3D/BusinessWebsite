@@ -19,7 +19,7 @@ export default function CartDrawer() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cartItems: items.map(item => ({ productId: item.id, quantity: item.quantity })),
+          cartItems: items.map(item => ({ productId: item.productId, variationId: item.variationId, quantity: item.quantity })),
         }),
       })
       const data = await res.json()
@@ -78,7 +78,7 @@ export default function CartDrawer() {
               ) : (
                 <div className="space-y-4">
                   {items.map(item => (
-                    <div key={item.id} className="flex gap-4 items-start">
+                    <div key={item.key} className="flex gap-4 items-start">
                       <div className="w-16 h-16 shrink-0 rounded-lg overflow-hidden bg-taupe/20 relative">
                         {item.imageUrl ? (
                           <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />
@@ -92,17 +92,20 @@ export default function CartDrawer() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium text-charcoal truncate">{item.name}</p>
+                        {item.variationLabel && (
+                          <p className="text-xs text-warm-gray mt-0.5">{item.variationLabel}</p>
+                        )}
                         <p className="text-sm text-charcoal/90">${item.price.toFixed(2)}</p>
                         <div className="flex items-center gap-2 mt-1.5">
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                            onClick={() => updateQuantity(item.key, item.quantity - 1)}
                             className="w-6 h-6 rounded-full border border-taupe text-charcoal flex items-center justify-center text-xs hover:bg-taupe/20 transition-colors"
                           >
                             −
                           </button>
                           <span className="text-sm font-medium w-5 text-center">{item.quantity}</span>
                           <button
-                            onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                            onClick={() => updateQuantity(item.key, item.quantity + 1)}
                             className="w-6 h-6 rounded-full border border-taupe text-charcoal flex items-center justify-center text-xs hover:bg-taupe/20 transition-colors"
                           >
                             +
@@ -110,7 +113,7 @@ export default function CartDrawer() {
                         </div>
                       </div>
                       <button
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => removeItem(item.key)}
                         className="text-warm-gray hover:text-charcoal transition-colors mt-1"
                       >
                         <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
