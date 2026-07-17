@@ -105,7 +105,7 @@ export async function fetchListingImage(shopId: number, listingId: number): Prom
     const img = data.results?.[0]
     return img?.url_570xN ?? img?.url_fullxfull ?? null
   } catch (e) {
-    console.error(`Etsy image fetch failed for listing ${listingId}:`, e)
+    console.error(`ETSY_IMG_ERR listing=${listingId} ::`, e instanceof Error ? e.message : String(e))
     return null
   }
 }
