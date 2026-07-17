@@ -1,14 +1,33 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { useCart } from './CartProvider'
 
 export default function CartDrawer() {
   const [open, setOpen] = useState(false)
+  const [mounted, setMounted] = useState(false)
   const [checkingOut, setCheckingOut] = useState(false)
   const [error, setError] = useState('')
   const { items, removeItem, updateQuantity, clearCart, totalItems, totalPrice } = useCart()
+
+  useEffect(() => { setMounted(true) }, [])
+
+  // Close on Escape, and stop the page scrolling behind the drawer.
+  useEffect(() => {
+    if (!open) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [open])
 
   async function handleCheckout() {
     if (items.length === 0) return
@@ -54,13 +73,20 @@ export default function CartDrawer() {
         )}
       </button>
 
-      {/* Overlay */}
-      {open && (
-        <div className="fixed inset-0 z-50">
+      {/* Overlay. Portalled to the body: the navbar uses backdrop-blur, which makes
+          it the containing block for `fixed` descendants, so rendered inline the
+          drawer sizes itself to the navbar rather than the viewport. */}
+      {open && mounted && createPortal(
+        <div className="fixed inset-0 z-[60]">
           <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} />
-          <div className="absolute right-0 top-0 h-full w-full max-w-md bg-cream border-l border-taupe/30 shadow-xl flex flex-col">
+          <div
+            className="absolute right-0 top-0 h-full w-full max-w-md bg-cream border-l border-taupe/30 shadow-xl flex flex-col"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Your cart"
+          >
             {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-taupe/30">
+            <div className="flex items-center justify-between px-6 py-4 border-b border-taupe/30 shrink-0">
               <h2 className="text-lg font-display">Your Cart</h2>
               <button onClick={() => setOpen(false)} className="text-warm-gray hover:text-charcoal transition-colors">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -140,7 +166,7 @@ export default function CartDrawer() {
 
             {/* Footer */}
             {items.length > 0 && (
-              <div className="border-t border-taupe/30 px-6 py-4 space-y-3">
+              <div className="border-t border-taupe/30 px-6 py-4 space-y-3 shrink-0">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-charcoal/90">Subtotal</span>
                   <span className="text-lg font-display">${totalPrice.toFixed(2)}</span>
@@ -158,7 +184,8 @@ export default function CartDrawer() {
               </div>
             )}
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   )
