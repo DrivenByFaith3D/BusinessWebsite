@@ -177,20 +177,37 @@ export function money(m: EtsyMoney | undefined): number | null {
   return Math.round((m.amount / m.divisor) * 100) / 100
 }
 
-// TEMP: report whether a reviews endpoint is reachable and what it returns.
-export async function probeReviews(path: string) {
-  try {
-    const data = await etsyGet<{ count?: number; results?: Record<string, unknown>[] }>(path)
-    return {
-      ok: true,
-      count: data.count ?? null,
-      returned: data.results?.length ?? 0,
-      keys: data.results?.[0] ? Object.keys(data.results[0]) : null,
-      sample: data.results?.[0] ?? null,
-    }
-  } catch (e) {
-    return { ok: false, error: e instanceof Error ? e.message.slice(0, 220) : String(e) }
+export interface EtsyReviewRow {
+  shop_id?: number
+  listing_id?: number | null
+  transaction_id?: number | null
+  rating?: number | null
+  review?: string | null
+  image_url_fullxfull?: string | null
+  create_timestamp?: number | null
+  created_timestamp?: number | null
+}
+
+// Reviews are fetched shop-wide rather than per listing: the shop endpoint is the
+// only one that returns transaction_id (a stable dedupe key) alongside listing_id,
+// and it costs one paged call instead of one per listing.
+export async function fetchShopReviews(shopId: number): Promise<EtsyReviewRow[]> {
+  const all: EtsyReviewRow[] = []
+  const limit = 100
+  let offset = 0
+
+  for (;;) {
+    const page = await etsyGet<{ count: number; results: EtsyReviewRow[] }>(
+      `/shops/${shopId}/reviews?limit=${limit}&offset=${offset}`,
+    )
+    const results = page.results ?? []
+    all.push(...results)
+    offset += results.length
+    if (results.length < limit || offset >= (page.count ?? 0)) break
+    if (offset > 5000) break
   }
+
+  return all
 }
 
 export async function resolveShopId(shopName: string): Promise<number> {

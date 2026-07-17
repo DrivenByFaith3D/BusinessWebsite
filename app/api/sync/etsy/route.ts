@@ -9,8 +9,8 @@ import {
   fetchListingDetails,
   listingPrice,
   orderedImages,
+  fetchShopReviews,
   parseVariations,
-  probeReviews,
   resolveShopId,
   shippingSummary,
 } from '@/lib/etsy'
@@ -23,6 +23,44 @@ interface SyncResult {
   updated: number
   deactivated: number
   total: number
+  reviews: number
+}
+
+// Mirror Etsy reviews and attach each to its product via the listing id. Reviews
+// for listings that are no longer active are still stored; they just have no
+// product to hang off.
+async function syncReviews(shopId: number): Promise<number> {
+  const rows = await fetchShopReviews(shopId)
+  if (rows.length === 0) return 0
+
+  const products = await prisma.product.findMany({
+    where: { etsyListingId: { not: null } },
+    select: { id: true, etsyListingId: true },
+  })
+  const byListing = new Map(products.map((p) => [p.etsyListingId, p.id]))
+
+  let saved = 0
+  for (const row of rows) {
+    if (row.transaction_id == null || row.rating == null) continue
+    const seconds = row.create_timestamp ?? row.created_timestamp
+    const data = {
+      etsyListingId: row.listing_id != null ? String(row.listing_id) : null,
+      productId: row.listing_id != null ? byListing.get(String(row.listing_id)) ?? null : null,
+      rating: row.rating,
+      review: row.review?.trim() || null,
+      imageUrl: row.image_url_fullxfull ?? null,
+      reviewedAt: seconds ? new Date(seconds * 1000) : new Date(),
+      syncedAt: new Date(),
+    }
+    await prisma.etsyReview.upsert({
+      where: { transactionId: String(row.transaction_id) },
+      create: { transactionId: String(row.transaction_id), ...data },
+      update: data,
+    })
+    saved++
+  }
+
+  return saved
 }
 
 async function runSync(): Promise<SyncResult> {
@@ -126,7 +164,16 @@ async function runSync(): Promise<SyncResult> {
     data: { inStock: false },
   })
 
-  return { created, updated, deactivated, total: listings.length }
+  // After products exist, so reviews can be matched to them by listing id.
+  // Non-fatal: a review failure should not sink a product sync.
+  let reviews = 0
+  try {
+    reviews = await syncReviews(shopId)
+  } catch (e) {
+    console.error('Etsy review sync failed:', e instanceof Error ? e.message : e)
+  }
+
+  return { created, updated, deactivated, total: listings.length, reviews }
 }
 
 function failure(e: unknown) {
@@ -146,23 +193,6 @@ export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET?.trim()
   if (secret && req.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
-
-  // TEMP: check whether Etsy exposes reviews without OAuth, and in what shape.
-  // Public listing data only; removed once the review sync is settled.
-  if (req.nextUrl.searchParams.get('probeReviews') === '1') {
-    try {
-      const shopId = await resolveShopId(etsyShopName())
-      const listings = await fetchActiveListings(shopId)
-      return NextResponse.json({
-        shopId,
-        listingId: listings[0]?.listing_id ?? null,
-        byShop: await probeReviews(`/shops/${shopId}/reviews?limit=3`),
-        byListing: await probeReviews(`/listings/${listings[0]?.listing_id}/reviews?limit=3`),
-      })
-    } catch (e) {
-      return failure(e)
-    }
   }
 
   try {

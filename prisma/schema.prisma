@@ -210,6 +210,26 @@ model Product {
   images      ProductImage[]
   variations  ProductVariation[]
   reviews     Review[]
+  etsyReviews EtsyReview[]
+}
+
+// A review left on Etsy, mirrored read-only. Kept separate from Review, which is
+// written by signed-in customers on this site and is tied to a User.
+model EtsyReview {
+  id            String   @id @default(cuid())
+  // Etsy's per-transaction id: the only stable key it gives us, so it doubles as
+  // the dedupe key across syncs.
+  transactionId String   @unique
+  etsyListingId String?
+  productId     String?
+  product       Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  rating        Int
+  review        String?
+  imageUrl      String?
+  reviewedAt    DateTime
+  syncedAt      DateTime @default(now())
+
+  @@index([productId, reviewedAt])
 }
 
 // A buyable combination from the listing's Etsy inventory, e.g. Primary color:

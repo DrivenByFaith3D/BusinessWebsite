@@ -8,7 +8,10 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
   const session = await getServerSession(authOptions)
   const products = await prisma.product.findMany({
     orderBy: { createdAt: 'desc' },
-    include: { reviews: { select: { rating: true } } },
+    include: {
+      reviews: { select: { rating: true } },
+      etsyReviews: { select: { rating: true } },
+    },
   })
 
   return (
@@ -39,10 +42,14 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {products.map((product) => {
-            const avg = product.reviews.length
-              ? product.reviews.reduce((s, r) => s + r.rating, 0) / product.reviews.length
-              : null
-            return <ProductCard key={product.id} product={product} avgRating={avg} reviewCount={product.reviews.length} isLoggedIn={!!session} />
+            // Etsy reviews count the same as site reviews here, so the grid and the
+            // detail page agree on the rating.
+            const ratings = [
+              ...product.reviews.map((r) => r.rating),
+              ...product.etsyReviews.map((r) => r.rating),
+            ]
+            const avg = ratings.length ? ratings.reduce((s, r) => s + r, 0) / ratings.length : null
+            return <ProductCard key={product.id} product={product} avgRating={avg} reviewCount={ratings.length} isLoggedIn={!!session} />
           })}
         </div>
       )}

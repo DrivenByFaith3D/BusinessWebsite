@@ -49,6 +49,8 @@ interface Review {
   comment: string | null
   author: string
   createdAt: string
+  source: 'site' | 'etsy'
+  imageUrl: string | null
 }
 
 const REGION: Record<string, string> = { US: 'the United States', GB: 'the United Kingdom', CA: 'Canada', AU: 'Australia' }
@@ -410,14 +412,24 @@ export default function ProductDetailClient({
             <div className="space-y-4">
               {reviews.map((r) => (
                 <div key={r.id} className="border-b border-taupe/20 pb-3 last:border-0">
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <StarRating value={r.rating} size="sm" />
                     <span className="text-xs text-charcoal font-medium">{r.author}</span>
+                    {r.source === 'etsy' && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-taupe/20 text-warm-gray">
+                        via Etsy
+                      </span>
+                    )}
                     <span className="text-xs text-warm-gray/60">
                       {new Date(r.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
                     </span>
                   </div>
-                  {r.comment && <p className="text-sm text-charcoal/85 mt-1.5">{r.comment}</p>}
+                  {r.comment && <p className="text-sm text-charcoal/85 mt-1.5 whitespace-pre-wrap">{r.comment}</p>}
+                  {r.imageUrl && (
+                    <div className="relative w-20 h-20 mt-2 rounded-lg overflow-hidden border border-taupe/30">
+                      <Image src={r.imageUrl} alt="" fill className="object-cover" />
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

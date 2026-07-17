@@ -17,15 +17,20 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       images: { orderBy: { rank: 'asc' } },
       variations: { orderBy: { rank: 'asc' } },
       reviews: { include: { user: { select: { name: true, email: true } } }, orderBy: { createdAt: 'desc' } },
+      etsyReviews: { orderBy: { reviewedAt: 'desc' } },
     },
   })
 
   if (!product) notFound()
 
-  const reviewCount = product.reviews.length
-  const avgRating = reviewCount
-    ? product.reviews.reduce((sum, r) => sum + r.rating, 0) / reviewCount
-    : null
+  // Site reviews and Etsy reviews both count toward the rating shown: a buyer
+  // does not care which system a review came from.
+  const allRatings = [
+    ...product.reviews.map((r) => r.rating),
+    ...product.etsyReviews.map((r) => r.rating),
+  ]
+  const reviewCount = allRatings.length
+  const avgRating = reviewCount ? allRatings.reduce((sum, r) => sum + r, 0) / reviewCount : null
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -77,13 +82,27 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         avgRating={avgRating}
         reviewCount={reviewCount}
         isLoggedIn={!!session}
-        reviews={product.reviews.map((r) => ({
-          id: r.id,
-          rating: r.rating,
-          comment: r.comment,
-          author: r.user.name ?? r.user.email.split('@')[0],
-          createdAt: r.createdAt.toISOString(),
-        }))}
+        reviews={[
+          ...product.reviews.map((r) => ({
+            id: r.id,
+            rating: r.rating,
+            comment: r.comment,
+            author: r.user.name ?? r.user.email.split('@')[0],
+            createdAt: r.createdAt.toISOString(),
+            source: 'site' as const,
+            imageUrl: null,
+          })),
+          ...product.etsyReviews.map((r) => ({
+            id: r.id,
+            rating: r.rating,
+            comment: r.review,
+            // Etsy exposes only a buyer id, never a name.
+            author: 'Etsy buyer',
+            createdAt: r.reviewedAt.toISOString(),
+            source: 'etsy' as const,
+            imageUrl: r.imageUrl,
+          })),
+        ].sort((a, b) => b.createdAt.localeCompare(a.createdAt))}
       />
     </div>
   )
