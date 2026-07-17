@@ -111,13 +111,8 @@ export async function fetchImagesFor(listingIds: number[]): Promise<Map<number, 
         // TEMP SHAPE PROBE — remove once the detail page sync is settled.
         const anyL = listing as unknown as Record<string, unknown>
         const sp = anyL.shipping_profile as Record<string, unknown> | undefined
-        console.log('ETSY_SHAPE', JSON.stringify({
-          keys: Object.keys(anyL),
-          imageCount: (listing.images ?? []).length,
-          imageFields: listing.images?.[0] ? Object.keys(listing.images[0]) : null,
-          hasShipping: !!sp,
-          shippingKeys: sp ? Object.keys(sp) : null,
-        }))
+        console.log('E_IMG count=' + (listing.images ?? []).length + ' fields=' + (listing.images?.[0] ? Object.keys(listing.images[0]).join('|') : 'none'))
+        console.log('E_SHIP has=' + !!sp + ' keys=' + (sp ? Object.keys(sp).join('|') : 'none'))
 
         const url = listingImage(listing)
         if (url) images.set(listing.listing_id, url)
