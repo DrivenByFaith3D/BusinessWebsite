@@ -41,6 +41,34 @@ async function etsyGet<T>(path: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
+export interface EtsyMoney {
+  amount: number
+  divisor: number
+  currency_code: string
+}
+
+export interface EtsyImage {
+  url_570xN?: string
+  url_fullxfull?: string
+  rank?: number
+}
+
+export interface EtsyShippingDestination {
+  destination_country_iso?: string | null
+  destination_region?: string | null
+  primary_cost?: EtsyMoney
+  min_delivery_days?: number | null
+  max_delivery_days?: number | null
+}
+
+export interface EtsyShippingProfile {
+  min_processing_days?: number | null
+  max_processing_days?: number | null
+  origin_country_iso?: string | null
+  origin_postal_code?: string | null
+  shipping_profile_destinations?: EtsyShippingDestination[]
+}
+
 export interface EtsyListing {
   listing_id: number
   title: string
@@ -48,8 +76,14 @@ export interface EtsyListing {
   url: string | null
   state: string
   quantity: number
-  price: { amount: number; divisor: number; currency_code: string }
-  images?: { url_570xN?: string; url_fullxfull?: string }[]
+  price: EtsyMoney
+  images?: EtsyImage[]
+  shipping_profile?: EtsyShippingProfile | null
+}
+
+export function money(m: EtsyMoney | undefined): number | null {
+  if (!m || !m.divisor) return null
+  return Math.round((m.amount / m.divisor) * 100) / 100
 }
 
 export async function resolveShopId(shopName: string): Promise<number> {
@@ -90,16 +124,12 @@ export function listingPrice(listing: EtsyListing): number {
   return Math.round((amount / divisor) * 100) / 100
 }
 
-export function listingImage(listing: EtsyListing): string | null {
-  const img = listing.images?.[0]
-  return img?.url_570xN ?? img?.url_fullxfull ?? null
-}
-
-// The active-listings endpoint ignores `includes=Images`, but the batch lookup
-// honours it. Fetch in chunks of 100 rather than per listing. Images are cosmetic,
-// so a failure here degrades to "no image" instead of failing the sync.
-export async function fetchImagesFor(listingIds: number[]): Promise<Map<number, string>> {
-  const images = new Map<number, string>()
+// The active-listings endpoint ignores `includes`, but the batch lookup honours it,
+// returning every image plus the shipping profile. Fetched 100 at a time rather
+// than per listing. A failure here degrades to "no detail" rather than failing the
+// whole sync, since the core listing data is already in hand.
+export async function fetchListingDetails(listingIds: number[]): Promise<Map<number, EtsyListing>> {
+  const details = new Map<number, EtsyListing>()
 
   for (let i = 0; i < listingIds.length; i += 100) {
     const chunk = listingIds.slice(i, i + 100)
@@ -108,18 +138,42 @@ export async function fetchImagesFor(listingIds: number[]): Promise<Map<number, 
         `/listings/batch?listing_ids=${chunk.join(',')}&includes=Images,Shipping`,
       )
       for (const listing of data.results ?? []) {
-        // TEMP SHAPE PROBE — remove once the detail page sync is settled.
-        const anyL = listing as unknown as Record<string, unknown>
-        const sp = anyL.shipping_profile as Record<string, unknown> | undefined
-        console.log(`E_SHAPE img=${(listing.images ?? []).length} ship=${!!sp} shipkeys=${sp ? Object.keys(sp).slice(0, 6).join(',') : '-'} dest=${(sp?.shipping_profile_destinations as unknown[] | undefined)?.length ?? '-'}`)
-
-        const url = listingImage(listing)
-        if (url) images.set(listing.listing_id, url)
+        details.set(listing.listing_id, listing)
       }
     } catch (e) {
-      console.error('ETSY_IMG_ERR ::', e instanceof Error ? e.message : String(e))
+      console.error('ETSY_DETAIL_ERR ::', e instanceof Error ? e.message : String(e))
     }
   }
 
-  return images
+  return details
+}
+
+// Etsy ranks images; keep that order so the shop matches the Etsy gallery.
+export function orderedImages(listing: EtsyListing | undefined): { url: string; fullUrl: string | null }[] {
+  if (!listing?.images) return []
+  return [...listing.images]
+    .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
+    .map((img) => ({ url: img.url_570xN ?? img.url_fullxfull ?? '', fullUrl: img.url_fullxfull ?? null }))
+    .filter((img) => img.url)
+}
+
+// Etsy models shipping per destination. Surface the cheapest as the headline
+// figure, preferring the origin country so a domestic buyer sees a domestic rate.
+export function shippingSummary(listing: EtsyListing | undefined) {
+  const profile = listing?.shipping_profile
+  if (!profile) return null
+
+  const destinations = profile.shipping_profile_destinations ?? []
+  const origin = profile.origin_country_iso ?? null
+  const preferred =
+    destinations.find((d) => origin && d.destination_country_iso === origin) ?? destinations[0]
+
+  return {
+    processingMin: profile.min_processing_days ?? null,
+    processingMax: profile.max_processing_days ?? null,
+    shipsFrom: origin,
+    shippingCost: money(preferred?.primary_cost) ?? null,
+    shippingMinDays: preferred?.min_delivery_days ?? null,
+    shippingMaxDays: preferred?.max_delivery_days ?? null,
+  }
 }

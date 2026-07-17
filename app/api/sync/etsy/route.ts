@@ -6,10 +6,11 @@ import {
   EtsyNotConfiguredError,
   etsyShopName,
   fetchActiveListings,
-  fetchImagesFor,
-  listingImage,
+  fetchListingDetails,
   listingPrice,
+  orderedImages,
   resolveShopId,
+  shippingSummary,
 } from '@/lib/etsy'
 
 export const dynamic = 'force-dynamic'
@@ -25,7 +26,7 @@ interface SyncResult {
 async function runSync(): Promise<SyncResult> {
   const shopId = await resolveShopId(etsyShopName())
   const listings = await fetchActiveListings(shopId)
-  const images = await fetchImagesFor(listings.map((l) => l.listing_id))
+  const details = await fetchListingDetails(listings.map((l) => l.listing_id))
 
   const seen: string[] = []
   let created = 0
@@ -35,24 +36,46 @@ async function runSync(): Promise<SyncResult> {
     const etsyListingId = String(listing.listing_id)
     seen.push(etsyListingId)
 
+    const detail = details.get(listing.listing_id)
+    const gallery = orderedImages(detail)
+    const shipping = shippingSummary(detail)
+
     const data = {
       name: listing.title,
       description: listing.description,
       price: listingPrice(listing),
-      imageUrl: listingImage(listing) ?? images.get(listing.listing_id) ?? null,
+      // Primary thumbnail; the grid and cart already read this field.
+      imageUrl: gallery[0]?.url ?? null,
       // Etsy's "active" listings can still be sold out.
       inStock: listing.quantity > 0,
       etsyUrl: listing.url,
       etsySyncedAt: new Date(),
+      processingMin: shipping?.processingMin ?? null,
+      processingMax: shipping?.processingMax ?? null,
+      shipsFrom: shipping?.shipsFrom ?? null,
+      shippingCost: shipping?.shippingCost ?? null,
+      shippingMinDays: shipping?.shippingMinDays ?? null,
+      shippingMaxDays: shipping?.shippingMaxDays ?? null,
     }
 
     const existing = await prisma.product.findUnique({ where: { etsyListingId } })
-    if (existing) {
-      await prisma.product.update({ where: { etsyListingId }, data })
-      updated++
-    } else {
-      await prisma.product.create({ data: { ...data, etsyListingId } })
-      created++
+    const product = existing
+      ? await prisma.product.update({ where: { etsyListingId }, data })
+      : await prisma.product.create({ data: { ...data, etsyListingId } })
+    existing ? updated++ : created++
+
+    // Replace the gallery wholesale: Etsy is the source of truth, and reconciling
+    // individual images is not worth the complexity for a handful of rows.
+    if (gallery.length > 0) {
+      await prisma.productImage.deleteMany({ where: { productId: product.id } })
+      await prisma.productImage.createMany({
+        data: gallery.map((img, rank) => ({
+          productId: product.id,
+          url: img.url,
+          fullUrl: img.fullUrl,
+          rank,
+        })),
+      })
     }
   }
 

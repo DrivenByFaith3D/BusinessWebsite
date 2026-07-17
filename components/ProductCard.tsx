@@ -1,6 +1,7 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { useState } from 'react'
 import StarRating from './StarRating'
 import ProductReviews from './ProductReviews'
@@ -37,9 +38,9 @@ export default function ProductCard({ product, avgRating, reviewCount, isLoggedI
 
   return (
     <div className="card overflow-hidden hover:border-taupe transition-colors flex flex-col">
-      <div className="aspect-square bg-taupe/20 relative">
+      <Link href={`/listings/${product.id}`} className="aspect-square bg-taupe/20 relative block group">
         {product.imageUrl ? (
-          <Image src={product.imageUrl} alt={product.name} fill className="object-cover" />
+          <Image src={product.imageUrl} alt={product.name} fill className="object-cover group-hover:scale-[1.02] transition-transform" />
         ) : (
           <div className="flex items-center justify-center h-full text-warm-gray">
             <svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -48,9 +49,11 @@ export default function ProductCard({ product, avgRating, reviewCount, isLoggedI
             </svg>
           </div>
         )}
-      </div>
+      </Link>
       <div className="p-4 flex flex-col flex-1">
-        <h3 className="font-semibold text-charcoal">{product.name}</h3>
+        <Link href={`/listings/${product.id}`} className="font-semibold text-charcoal hover:underline">
+          {product.name}
+        </Link>
         {product.description && (
           <p className="text-sm text-charcoal/85 mt-1 line-clamp-2 flex-1">{product.description}</p>
         )}

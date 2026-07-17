@@ -181,7 +181,29 @@ model Product {
   etsyUrl       String?
   etsySyncedAt  DateTime?
 
+  // Shipping, mirrored from the listing's Etsy shipping profile.
+  processingMin Int?
+  processingMax Int?
+  shipsFrom     String?
+  shippingCost  Float?
+  shippingMinDays Int?
+  shippingMaxDays Int?
+
+  images      ProductImage[]
   reviews     Review[]
+}
+
+// Every image on a listing, ordered as Etsy ranks them. Product.imageUrl stays as
+// the primary thumbnail so existing grid/cart code keeps working.
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  fullUrl   String?
+  rank      Int     @default(0)
+
+  @@index([productId, rank])
 }
 
 model Review {
