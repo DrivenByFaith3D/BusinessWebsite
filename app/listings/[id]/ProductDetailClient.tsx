@@ -1,7 +1,7 @@
 'use client'
 
 import Image from 'next/image'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import StarRating from '@/components/StarRating'
 import { useCart } from '@/components/CartProvider'
 
@@ -81,21 +81,43 @@ export default function ProductDetailClient({
   reviews,
 }: {
   product: Product
-  images: { id: string; url: string }[]
+  images: { id: string; url: string; fullUrl?: string | null }[]
   variations: Variation[]
   avgRating: number | null
   reviewCount: number
   isLoggedIn: boolean
   reviews: Review[]
 }) {
-  const gallery = images.length > 0 ? images : product.imageUrl ? [{ id: 'main', url: product.imageUrl }] : []
+  const gallery = images.length > 0 ? images : product.imageUrl ? [{ id: 'main', url: product.imageUrl, fullUrl: null }] : []
   const buyable = variations.filter((v) => v.isEnabled && v.quantity > 0)
 
   const [active, setActive] = useState(0)
+  const [zoomed, setZoomed] = useState(false)
   const [variationId, setVariationId] = useState<string | null>(null)
   const [added, setAdded] = useState(false)
   const [error, setError] = useState('')
   const { addItem } = useCart()
+
+  const step = useCallback((delta: number) => {
+    setActive((i) => (i + delta + gallery.length) % gallery.length)
+  }, [gallery.length])
+
+  // Drive the lightbox from the keyboard, and stop the page scrolling behind it.
+  useEffect(() => {
+    if (!zoomed) return
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') setZoomed(false)
+      if (e.key === 'ArrowRight') step(1)
+      if (e.key === 'ArrowLeft') step(-1)
+    }
+    document.addEventListener('keydown', onKey)
+    const prevOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', onKey)
+      document.body.style.overflow = prevOverflow
+    }
+  }, [zoomed, step])
 
   const selected = variations.find((v) => v.id === variationId) ?? null
   // Variations can carry their own price, so the headline follows the selection.
@@ -146,18 +168,29 @@ export default function ProductDetailClient({
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
       {/* Gallery */}
       <div>
-        <div className="aspect-square bg-taupe/20 relative rounded-xl overflow-hidden border border-taupe/30">
-          {gallery.length > 0 ? (
+        {gallery.length > 0 ? (
+          <button
+            onClick={() => setZoomed(true)}
+            aria-label="Enlarge image"
+            className="aspect-square bg-taupe/20 relative rounded-xl overflow-hidden border border-taupe/30 w-full block group cursor-zoom-in"
+          >
             <Image src={gallery[active].url} alt={product.name} fill className="object-cover" priority />
-          ) : (
+            <span className="absolute bottom-3 right-3 bg-white/85 backdrop-blur-sm rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <svg className="w-4 h-4 text-charcoal" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+              </svg>
+            </span>
+          </button>
+        ) : (
+          <div className="aspect-square bg-taupe/20 relative rounded-xl overflow-hidden border border-taupe/30">
             <div className="flex items-center justify-center h-full text-warm-gray">
               <svg className="w-16 h-16" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1}
                   d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
               </svg>
             </div>
-          )}
-        </div>
+          </div>
+        )}
 
         {gallery.length > 1 && (
           <div className="grid grid-cols-5 gap-2 mt-3">
@@ -322,17 +355,6 @@ export default function ProductDetailClient({
           </div>
         )}
 
-        {product.etsyUrl && (
-          <a
-            href={product.etsyUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-block text-xs text-warm-gray hover:text-charcoal underline mt-5 transition-colors"
-          >
-            View this listing on Etsy
-          </a>
-        )}
-
         {/* Reviews */}
         {reviews.length > 0 && (
           <div className="mt-8">
@@ -356,6 +378,69 @@ export default function ProductDetailClient({
           </div>
         )}
       </div>
+
+      {/* Lightbox */}
+      {zoomed && gallery.length > 0 && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center p-4 cursor-zoom-out"
+          onClick={() => setZoomed(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${product.name}, image ${active + 1} of ${gallery.length}`}
+        >
+          <button
+            onClick={() => setZoomed(false)}
+            aria-label="Close"
+            className="absolute top-4 right-4 text-white/80 hover:text-white p-2 z-10"
+          >
+            <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+
+          {gallery.length > 1 && (
+            <>
+              <button
+                onClick={(e) => { e.stopPropagation(); step(-1) }}
+                aria-label="Previous image"
+                className="absolute left-2 sm:left-6 text-white/70 hover:text-white p-3 z-10"
+              >
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <button
+                onClick={(e) => { e.stopPropagation(); step(1) }}
+                aria-label="Next image"
+                className="absolute right-2 sm:right-6 text-white/70 hover:text-white p-3 z-10"
+              >
+                <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </>
+          )}
+
+          {/* Stop the click here so tapping the photo itself doesn't close it. */}
+          <div className="relative w-full h-full max-w-4xl cursor-default" onClick={(e) => e.stopPropagation()}>
+            <Image
+              // Prefer the full-resolution file; the gallery URL is only 570px wide.
+              src={gallery[active].fullUrl ?? gallery[active].url}
+              alt={`${product.name}, image ${active + 1} of ${gallery.length}`}
+              fill
+              className="object-contain"
+              sizes="(max-width: 896px) 100vw, 896px"
+              priority
+            />
+          </div>
+
+          {gallery.length > 1 && (
+            <p className="absolute bottom-5 text-white/70 text-sm">
+              {active + 1} / {gallery.length}
+            </p>
+          )}
+        </div>
+      )}
     </div>
   )
 }

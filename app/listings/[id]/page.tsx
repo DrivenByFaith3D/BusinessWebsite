@@ -73,7 +73,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           isEnabled: v.isEnabled,
           options: v.options as { name: string; value: string }[],
         }))}
-        images={product.images.map((i) => ({ id: i.id, url: i.url }))}
+        images={product.images.map((i) => ({ id: i.id, url: i.url, fullUrl: i.fullUrl }))}
         avgRating={avgRating}
         reviewCount={reviewCount}
         isLoggedIn={!!session}
