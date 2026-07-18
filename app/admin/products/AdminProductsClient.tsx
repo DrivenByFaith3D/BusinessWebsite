@@ -104,7 +104,7 @@ export default function AdminProductsClient({
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <p className="text-sm text-warm-gray">
-          Your shop as customers see it. Products are managed on Etsy — edit them there, then sync.
+          Pick an item to see its sales and reviews. Products are managed on Etsy — edit them there, then sync.
         </p>
         <div className="flex items-center gap-3 shrink-0">
           {syncMessage && (
@@ -139,7 +139,7 @@ export default function AdminProductsClient({
           {initialProducts.map(product => (
             <Link
               key={product.id}
-              href={`/listings/${product.id}`}
+              href={`/admin/products/${product.id}`}
               className="card overflow-hidden flex flex-col group hover:border-taupe transition-colors"
             >
               <div className="aspect-video bg-taupe/5 overflow-hidden relative">
@@ -195,7 +195,7 @@ export default function AdminProductsClient({
 
                 <div className="mt-auto pt-3 border-t border-taupe/10 flex items-center justify-between">
                   <span className="text-xs text-warm-gray group-hover:text-charcoal transition-colors flex items-center gap-1">
-                    View as customer
+                    Sales &amp; reviews
                     <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                     </svg>
