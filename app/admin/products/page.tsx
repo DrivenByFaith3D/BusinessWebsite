@@ -8,29 +8,37 @@ export default async function AdminProductsPage() {
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'admin') redirect('/')
 
-  const [products, reviewStats] = await Promise.all([
-    prisma.product.findMany({ orderBy: { createdAt: 'desc' } }),
-    prisma.review.groupBy({
-      by: ['productId'],
-      _count: { id: true },
-      _avg: { rating: true },
-    }),
-  ])
+  const products = await prisma.product.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      variations: { orderBy: { rank: 'asc' }, select: { label: true, quantity: true, isEnabled: true } },
+      reviews: { select: { rating: true } },
+      etsyReviews: { select: { rating: true } },
+      _count: { select: { images: true } },
+    },
+  })
 
-  const reviewMap = new Map(reviewStats.map(r => [r.productId, {
-    count: r._count.id,
-    avg: r._avg.rating ?? 0,
-  }]))
+  // Etsy reviews and site reviews are counted together, matching the storefront.
+  const productsWithStats = products.map(p => {
+    const ratings = [...p.reviews.map(r => r.rating), ...p.etsyReviews.map(r => r.rating)]
+    return {
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      imageUrl: p.imageUrl,
+      inStock: p.inStock,
+      isEtsy: p.etsyListingId != null,
+      imageCount: p._count.images,
+      variationLabels: p.variations.map(v => v.label),
+      reviewCount: ratings.length,
+      avgRating: ratings.length ? ratings.reduce((s, r) => s + r, 0) / ratings.length : 0,
+    }
+  })
 
-  const productsWithStats = products.map(p => ({
-    ...p,
-    reviewCount: reviewMap.get(p.id)?.count ?? 0,
-    avgRating: reviewMap.get(p.id)?.avg ?? 0,
-  }))
-
-  const totalReviews = reviewStats.reduce((s, r) => s + r._count.id, 0)
-  const overallAvg = reviewStats.length
-    ? reviewStats.reduce((s, r) => s + (r._avg.rating ?? 0), 0) / reviewStats.length
+  const totalReviews = productsWithStats.reduce((s, p) => s + p.reviewCount, 0)
+  const rated = productsWithStats.filter(p => p.reviewCount > 0)
+  const overallAvg = rated.length
+    ? rated.reduce((s, p) => s + p.avgRating, 0) / rated.length
     : null
   const mostReviewed = [...productsWithStats].sort((a, b) => b.reviewCount - a.reviewCount)[0]
 
