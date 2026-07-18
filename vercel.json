@@ -3,6 +3,10 @@
     {
       "path": "/api/sync/etsy",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/sync/etsy-orders",
+      "schedule": "30 8 * * *"
     }
   ]
 }

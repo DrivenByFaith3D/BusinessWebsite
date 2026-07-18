@@ -195,40 +195,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // TEMP: report the STRUCTURE of a receipt (field names + types only, never the
-  // buyer's actual name/address/email) so the order sync can be built against the
-  // real shape. Removed once Phase 2 lands.
-  if (req.nextUrl.searchParams.get('probeReceipts') === '1') {
-    try {
-      const { getValidAccessToken, oauthHeaders } = await import('@/lib/etsy-oauth')
-      const { shopId, accessToken } = await getValidAccessToken()
-      const res = await fetch(
-        `https://openapi.etsy.com/v3/application/shops/${shopId}/receipts?limit=2&includes=Transactions`,
-        { headers: oauthHeaders(accessToken), cache: 'no-store' },
-      )
-      const data = (await res.json()) as { count?: number; results?: Record<string, unknown>[] }
-      const describe = (o: Record<string, unknown> | undefined) =>
-        o
-          ? Object.fromEntries(
-              Object.entries(o).map(([k, v]) => [
-                k,
-                Array.isArray(v) ? `array[${v.length}]` : v === null ? 'null' : typeof v,
-              ]),
-            )
-          : null
-      const r0 = data.results?.[0]
-      const txns = (r0?.transactions as Record<string, unknown>[] | undefined) ?? []
-      return NextResponse.json({
-        status: res.status,
-        count: data.count ?? null,
-        receiptKeys: describe(r0),
-        transactionKeys: describe(txns[0]),
-      })
-    } catch (e) {
-      return failure(e)
-    }
-  }
-
   try {
     return NextResponse.json({ ok: true, ...(await runSync()) })
   } catch (e) {

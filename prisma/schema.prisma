@@ -316,6 +316,52 @@ model ShopOrderItem {
   @@index([shopOrderId])
 }
 
+// An Etsy order (receipt), mirrored so it can be fulfilled and shipped from this
+// site. Buyer name/address are the seller's own order data.
+model EtsyOrder {
+  id               String   @id @default(cuid())
+  receiptId        String   @unique
+  buyerName        String?
+  status           String?
+  isPaid           Boolean  @default(false)
+  isShipped        Boolean  @default(false)
+  grandTotal       Float?
+  currency         String?
+  addrLine1        String?
+  addrLine2        String?
+  addrCity         String?
+  addrState        String?
+  addrZip          String?
+  addrCountry      String?
+  formattedAddress String?
+  messageFromBuyer String?
+  // Tracking, from Etsy's own shipments or pushed here after a Shippo label buy.
+  trackingCode     String?
+  carrier          String?
+  labelUrl         String?
+  orderedAt        DateTime
+  syncedAt         DateTime @default(now())
+
+  items EtsyOrderItem[]
+
+  @@index([isShipped, orderedAt])
+}
+
+model EtsyOrderItem {
+  id            String    @id @default(cuid())
+  etsyOrderId   String
+  order         EtsyOrder @relation(fields: [etsyOrderId], references: [id], onDelete: Cascade)
+  transactionId String    @unique
+  title         String
+  quantity      Int
+  price         Float?
+  variations    String?
+  listingId     String?
+  productId     String?
+
+  @@index([etsyOrderId])
+}
+
 // Single stored Etsy OAuth grant (this site connects one shop). Access tokens
 // last an hour and are refreshed on demand; refresh tokens rotate on each use.
 model EtsyToken {
