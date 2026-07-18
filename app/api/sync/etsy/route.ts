@@ -195,23 +195,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  // TEMP: confirm whether receipts (orders) are reachable with the public app key,
-  // or whether they require OAuth. No private data is returned either way — only
-  // the HTTP status and Etsy's error message.
-  if (req.nextUrl.searchParams.get('probeReceipts') === '1') {
-    try {
-      const shopId = await resolveShopId(etsyShopName())
-      const apiKey = `${process.env.ETSY_KEYSTRING?.trim()}:${process.env.ETSY_SHARED_SECRET?.trim()}`
-      const res = await fetch(`https://openapi.etsy.com/v3/application/shops/${shopId}/receipts?limit=1`, {
-        headers: { 'x-api-key': apiKey },
-        cache: 'no-store',
-      })
-      return NextResponse.json({ shopId, status: res.status, body: (await res.text()).slice(0, 300) })
-    } catch (e) {
-      return failure(e)
-    }
-  }
-
   try {
     return NextResponse.json({ ok: true, ...(await runSync()) })
   } catch (e) {
