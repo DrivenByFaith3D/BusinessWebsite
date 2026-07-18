@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import ShipEtsyModal from './ShipEtsyModal'
 
 interface Item {
   id: string
@@ -49,6 +50,7 @@ export default function EtsyOrdersClient({
   const [syncing, setSyncing] = useState(false)
   const [message, setMessage] = useState('')
   const [tab, setTab] = useState<'unshipped' | 'shipped'>('unshipped')
+  const [shipping, setShipping] = useState<EtsyOrderView | null>(null)
 
   async function syncOrders() {
     setSyncing(true)
@@ -168,11 +170,17 @@ export default function EtsyOrdersClient({
                         .join('\n')}
                   </p>
                 </div>
-                {o.trackingCode && (
+                {o.trackingCode ? (
                   <div className="text-right">
                     <p className="text-xs font-semibold uppercase tracking-wide text-warm-gray/70 mb-0.5">Tracking</p>
                     <p className="text-charcoal/85">{o.carrier ? `${o.carrier.toUpperCase()} ` : ''}{o.trackingCode}</p>
                   </div>
+                ) : (
+                  !o.isShipped && (
+                    <button onClick={() => setShipping(o)} className="btn-primary text-sm py-1.5 px-4 shrink-0">
+                      Ship
+                    </button>
+                  )
                 )}
               </div>
 
@@ -184,6 +192,14 @@ export default function EtsyOrdersClient({
             </div>
           ))}
         </div>
+      )}
+
+      {shipping && (
+        <ShipEtsyModal
+          order={shipping}
+          onClose={() => setShipping(null)}
+          onShipped={() => { setShipping(null); router.refresh() }}
+        />
       )}
     </div>
   )

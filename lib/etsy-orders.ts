@@ -1,4 +1,4 @@
-import { etsyAuthedGet, getValidAccessToken } from './etsy-oauth'
+import { etsyAuthedGet, etsyAuthedPost, getValidAccessToken } from './etsy-oauth'
 import { money, type EtsyMoney } from './etsy'
 
 // Reads and parses Etsy receipts (orders). Requires an OAuth connection.
@@ -79,4 +79,28 @@ export function receiptTracking(receipt: EtsyReceipt): { code: string; carrier: 
 
 export function receiptTotal(receipt: EtsyReceipt): number | null {
   return money(receipt.grandtotal)
+}
+
+// Etsy expects a known carrier slug for tracking links to resolve.
+export function etsyCarrierName(provider: string | null | undefined): string {
+  const p = (provider ?? '').toLowerCase()
+  if (p.includes('usps')) return 'usps'
+  if (p.includes('ups')) return 'ups'
+  if (p.includes('fedex')) return 'fedex'
+  if (p.includes('dhl')) return 'dhl'
+  return p || 'usps'
+}
+
+// Push a tracking number to an Etsy receipt. This marks the order shipped on Etsy
+// and emails the buyer their tracking. Requires the transactions_w scope.
+export async function pushTrackingToEtsy(
+  receiptId: string,
+  trackingCode: string,
+  carrierName: string,
+): Promise<void> {
+  const { shopId } = await getValidAccessToken()
+  await etsyAuthedPost(`/shops/${shopId}/receipts/${receiptId}/tracking`, {
+    tracking_code: trackingCode,
+    carrier_name: carrierName,
+  })
 }
