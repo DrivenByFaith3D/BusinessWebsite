@@ -80,20 +80,29 @@ export default function ProductDetailClient({
   product,
   images,
   variations,
+  colorImages = [],
   avgRating,
   reviewCount,
   reviews,
 }: {
   product: Product
-  images: { id: string; url: string; fullUrl?: string | null }[]
+  images: { id: string; url: string; fullUrl?: string | null; etsyImageId?: string | null }[]
   variations: Variation[]
+  colorImages?: { value: string; etsyImageId: string }[]
   avgRating: number | null
   reviewCount: number
   isLoggedIn: boolean
   reviews: Review[]
 }) {
-  const gallery = images.length > 0 ? images : product.imageUrl ? [{ id: 'main', url: product.imageUrl, fullUrl: null }] : []
+  const gallery = images.length > 0 ? images : product.imageUrl ? [{ id: 'main', url: product.imageUrl, fullUrl: null, etsyImageId: null }] : []
   const buyable = variations.filter((v) => v.isEnabled && v.quantity > 0)
+
+  // colour value -> gallery index, so selecting a colour can jump to its photo.
+  const colorToIndex = new Map<string, number>()
+  for (const c of colorImages) {
+    const idx = gallery.findIndex((g) => g.etsyImageId && g.etsyImageId === c.etsyImageId)
+    if (idx >= 0) colorToIndex.set(c.value, idx)
+  }
 
   const [active, setActive] = useState(0)
   const [zoomed, setZoomed] = useState(false)
@@ -253,10 +262,17 @@ export default function ProductDetailClient({
             <div className="flex flex-wrap gap-2">
               {variations.map((v) => {
                 const disabled = !v.isEnabled || v.quantity < 1
+                const colorValue = v.options.find((o) => o.name === optionName)?.value ?? v.options[0]?.value ?? v.label
                 return (
                   <button
                     key={v.id}
-                    onClick={() => { setVariationId(v.id); setError('') }}
+                    onClick={() => {
+                      setVariationId(v.id)
+                      setError('')
+                      // Jump the gallery to this colour's photo, if one is mapped.
+                      const idx = colorToIndex.get(colorValue)
+                      if (idx != null) setActive(idx)
+                    }}
                     disabled={disabled}
                     className={`px-3.5 py-2 rounded-full border text-sm transition-all ${
                       v.id === variationId

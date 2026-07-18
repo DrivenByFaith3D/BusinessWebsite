@@ -47,8 +47,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   <p className="text-charcoal text-sm">info@drivenbyfaith3d.com</p>
                 </div>
               </div>
-              <div className="border-t border-taupe/30 mt-8 pt-6 text-center">
+              <div className="border-t border-taupe/30 mt-8 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <p className="text-warm-gray text-xs">&copy; {new Date().getFullYear()} DrivenByFaith3D. All rights reserved.</p>
+                <nav className="flex items-center gap-4 text-xs">
+                  <Link href="/track" className="text-warm-gray hover:text-charcoal transition-colors">Track Order</Link>
+                  <Link href="/privacy" className="text-warm-gray hover:text-charcoal transition-colors">Privacy Policy</Link>
+                  <Link href="/terms" className="text-warm-gray hover:text-charcoal transition-colors">Terms &amp; Conditions</Link>
+                </nav>
               </div>
             </div>
           </footer>

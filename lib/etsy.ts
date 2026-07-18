@@ -48,6 +48,7 @@ export interface EtsyMoney {
 }
 
 export interface EtsyImage {
+  listing_image_id?: number
   url_570xN?: string
   url_fullxfull?: string
   rank?: number
@@ -276,12 +277,36 @@ export async function fetchListingDetails(
 }
 
 // Etsy ranks images; keep that order so the shop matches the Etsy gallery.
-export function orderedImages(listing: EtsyListing | undefined): { url: string; fullUrl: string | null }[] {
+export function orderedImages(
+  listing: EtsyListing | undefined,
+): { url: string; fullUrl: string | null; etsyImageId: string | null }[] {
   if (!listing?.images) return []
   return [...listing.images]
     .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
-    .map((img) => ({ url: img.url_570xN ?? img.url_fullxfull ?? '', fullUrl: img.url_fullxfull ?? null }))
+    .map((img) => ({
+      url: img.url_570xN ?? img.url_fullxfull ?? '',
+      fullUrl: img.url_fullxfull ?? null,
+      etsyImageId: img.listing_image_id != null ? String(img.listing_image_id) : null,
+    }))
     .filter((img) => img.url)
+}
+
+// Etsy's per-colour photo assignments (empty for most listings). Maps a property
+// value like "Army Blue" to a listing_image_id. Public endpoint (app key).
+export async function fetchVariationImages(
+  shopId: number,
+  listingId: number,
+): Promise<{ value: string; etsyImageId: string }[]> {
+  try {
+    const data = await etsyGet<{ results: { value: string; image_id: number }[] }>(
+      `/shops/${shopId}/listings/${listingId}/variation-images`,
+    )
+    return (data.results ?? [])
+      .filter((r) => r.image_id != null && r.value)
+      .map((r) => ({ value: r.value, etsyImageId: String(r.image_id) }))
+  } catch {
+    return []
+  }
 }
 
 // Etsy models shipping per destination. Prefer the origin country so a domestic

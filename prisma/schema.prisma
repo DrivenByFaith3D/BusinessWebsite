@@ -212,6 +212,7 @@ model Product {
   reviews     Review[]
   etsyReviews EtsyReview[]
   backInStock BackInStockSubscription[]
+  colorImages ProductColorImage[]
 }
 
 // A review left on Etsy, mirrored read-only. Kept separate from Review, which is
@@ -261,8 +262,27 @@ model ProductImage {
   url       String
   fullUrl   String?
   rank      Int     @default(0)
+  // Etsy's stable listing_image_id, so a colour→photo mapping survives the sync
+  // rebuilding these rows and can be matched back to the right photo.
+  etsyImageId String?
 
   @@index([productId, rank])
+}
+
+// Which photo to show for a given variation colour. Keyed by the colour value
+// (not a variation/image row id) so it survives the wholesale variation/image
+// rebuild on each Etsy sync. `etsyImageId` points at a ProductImage.etsyImageId.
+// source=admin was set by hand and is never overwritten by the sync; source=etsy
+// comes from Etsy's own variation images.
+model ProductColorImage {
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  value       String
+  etsyImageId String
+  source      String   @default("admin")
+  updatedAt   DateTime @updatedAt
+
+  @@id([productId, value])
 }
 
 model Review {

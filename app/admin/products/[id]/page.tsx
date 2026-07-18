@@ -4,6 +4,7 @@ import { prisma } from '@/lib/prisma'
 import { notFound, redirect } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+import ColorImageMapper from './ColorImageMapper'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,8 +15,30 @@ export default async function AdminProductDashboard({ params }: { params: { id: 
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'admin') redirect('/')
 
-  const product = await prisma.product.findUnique({ where: { id: params.id } })
+  const product = await prisma.product.findUnique({
+    where: { id: params.id },
+    include: {
+      images: { orderBy: { rank: 'asc' } },
+      variations: { orderBy: { rank: 'asc' } },
+      colorImages: true,
+    },
+  })
   if (!product) notFound()
+
+  // Distinct colour values (the picker property) and their current photo mapping.
+  const optionName = product.variations[0]?.options
+    ? ((product.variations[0].options as { name: string }[])[0]?.name ?? 'Colour')
+    : 'Colour'
+  const colorValues = Array.from(
+    new Set(
+      product.variations.flatMap((v) => {
+        const opts = v.options as { name: string; value: string }[]
+        const opt = opts.find((o) => o.name === optionName) ?? opts[0]
+        return opt?.value ? [opt.value] : []
+      }),
+    ),
+  )
+  const colorMap = new Map(product.colorImages.map((c) => [c.value, c.etsyImageId]))
 
   const [etsyItems, shopItems, etsyReviews, siteReviews] = await Promise.all([
     prisma.etsyOrderItem.findMany({
@@ -130,6 +153,23 @@ export default async function AdminProductDashboard({ params }: { params: { id: 
           </div>
         </div>
       </div>
+
+      {/* Colour photos */}
+      {colorValues.length > 0 && product.images.some((i) => i.etsyImageId) && (
+        <div className="card p-5 mb-8">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-warm-gray mb-1">Colour photos</h2>
+          <p className="text-xs text-warm-gray mb-4">
+            Pick which photo shows each {optionName.toLowerCase()}. Customers see it when they select that colour.
+          </p>
+          <ColorImageMapper
+            productId={product.id}
+            colors={colorValues.map((value) => ({ value, etsyImageId: colorMap.get(value) ?? null }))}
+            images={product.images
+              .filter((i) => i.etsyImageId)
+              .map((i) => ({ etsyImageId: i.etsyImageId as string, url: i.url }))}
+          />
+        </div>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">

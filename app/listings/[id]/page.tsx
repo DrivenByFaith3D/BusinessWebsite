@@ -18,6 +18,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
       variations: { orderBy: { rank: 'asc' } },
       reviews: { include: { user: { select: { name: true, email: true } } }, orderBy: { createdAt: 'desc' } },
       etsyReviews: { orderBy: { reviewedAt: 'desc' } },
+      colorImages: true,
     },
   })
 
@@ -78,7 +79,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           isEnabled: v.isEnabled,
           options: v.options as { name: string; value: string }[],
         }))}
-        images={product.images.map((i) => ({ id: i.id, url: i.url, fullUrl: i.fullUrl }))}
+        images={product.images.map((i) => ({ id: i.id, url: i.url, fullUrl: i.fullUrl, etsyImageId: i.etsyImageId }))}
+        colorImages={product.colorImages.map((c) => ({ value: c.value, etsyImageId: c.etsyImageId }))}
         avgRating={avgRating}
         reviewCount={reviewCount}
         isLoggedIn={!!session}

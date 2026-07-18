@@ -8,6 +8,7 @@ import {
   etsyShopName,
   fetchActiveListings,
   fetchListingDetails,
+  fetchVariationImages,
   listingPrice,
   orderedImages,
   fetchShopReviews,
@@ -169,9 +170,31 @@ async function runSync(): Promise<SyncResult> {
           productId: product.id,
           url: img.url,
           fullUrl: img.fullUrl,
+          etsyImageId: img.etsyImageId,
           rank,
         })),
       })
+    }
+
+    // Colour photos: if the seller assigned per-colour images on Etsy, mirror them
+    // (source=etsy). Admin-set mappings (source=admin) are left untouched.
+    try {
+      const variationImages = await fetchVariationImages(shopId, listing.listing_id)
+      for (const vi of variationImages) {
+        const current = await prisma.productColorImage.findUnique({
+          where: { productId_value: { productId: product.id, value: vi.value } },
+          select: { source: true },
+        })
+        // Never clobber a hand-picked mapping with Etsy's.
+        if (current?.source === 'admin') continue
+        await prisma.productColorImage.upsert({
+          where: { productId_value: { productId: product.id, value: vi.value } },
+          create: { productId: product.id, value: vi.value, etsyImageId: vi.etsyImageId, source: 'etsy' },
+          update: { etsyImageId: vi.etsyImageId, source: 'etsy' },
+        })
+      }
+    } catch (e) {
+      console.error('Variation-image sync failed:', e instanceof Error ? e.message : e)
     }
 
     await prisma.productVariation.deleteMany({ where: { productId: product.id } })
