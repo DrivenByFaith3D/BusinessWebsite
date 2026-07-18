@@ -316,6 +316,27 @@ model ShopOrderItem {
   @@index([shopOrderId])
 }
 
+// Single stored Etsy OAuth grant (this site connects one shop). Access tokens
+// last an hour and are refreshed on demand; refresh tokens rotate on each use.
+model EtsyToken {
+  id           String   @id @default("shop")
+  shopId       String
+  accessToken  String
+  refreshToken String
+  scope        String?
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// Short-lived PKCE state for an in-flight OAuth authorization. Consumed by the
+// callback; stale rows are swept on the next connect.
+model EtsyOAuthState {
+  state        String   @id
+  codeVerifier String
+  createdAt    DateTime @default(now())
+}
+
 model GalleryPhoto {
   id        String   @id @default(cuid())
   url       String

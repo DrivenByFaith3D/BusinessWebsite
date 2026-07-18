@@ -1,8 +1,17 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useSearchParams } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
+
+const CONNECT_MESSAGES: Record<string, { text: string; ok: boolean }> = {
+  connected: { text: 'Etsy connected. Your orders can now sync.', ok: true },
+  denied: { text: 'Etsy connection was cancelled.', ok: false },
+  expired: { text: 'That connection attempt expired. Please try again.', ok: false },
+  noshop: { text: 'No Etsy shop was found for that account.', ok: false },
+  error: { text: 'Something went wrong connecting to Etsy. Please try again.', ok: false },
+}
 
 interface Product {
   id: string
@@ -17,9 +26,23 @@ interface Product {
   avgRating: number
 }
 
-export default function AdminProductsClient({ initialProducts }: { initialProducts: Product[] }) {
+export default function AdminProductsClient({
+  initialProducts,
+  etsyConnected,
+}: {
+  initialProducts: Product[]
+  etsyConnected: boolean
+}) {
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState('')
+
+  // Surface the ?etsy= status the OAuth callback redirects back with.
+  const searchParams = useSearchParams()
+  const [connectNotice, setConnectNotice] = useState<{ text: string; ok: boolean } | null>(null)
+  useEffect(() => {
+    const status = searchParams.get('etsy')
+    if (status && CONNECT_MESSAGES[status]) setConnectNotice(CONNECT_MESSAGES[status])
+  }, [searchParams])
 
   async function syncEtsy() {
     setSyncing(true)
@@ -45,6 +68,39 @@ export default function AdminProductsClient({ initialProducts }: { initialProduc
 
   return (
     <div>
+      {connectNotice && (
+        <div className={`mb-4 rounded-lg px-4 py-3 text-sm border ${
+          connectNotice.ok
+            ? 'bg-green-50 border-green-200 text-green-800'
+            : 'bg-red-50 border-red-200 text-red-700'
+        }`}>
+          {connectNotice.text}
+        </div>
+      )}
+
+      {/* Etsy connection */}
+      <div className="card p-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <span className={`w-2.5 h-2.5 rounded-full ${etsyConnected ? 'bg-green-500' : 'bg-taupe/50'}`} />
+          <div>
+            <p className="text-sm font-medium text-charcoal">
+              {etsyConnected ? 'Etsy account connected' : 'Etsy account not connected'}
+            </p>
+            <p className="text-xs text-warm-gray">
+              {etsyConnected
+                ? 'Your Etsy orders can sync in, and shipping labels can push tracking back.'
+                : 'Connect to sync your Etsy orders and push shipping tracking back to Etsy.'}
+            </p>
+          </div>
+        </div>
+        <a
+          href="/api/etsy/connect"
+          className={`text-sm shrink-0 text-center ${etsyConnected ? 'btn-secondary' : 'btn-primary'}`}
+        >
+          {etsyConnected ? 'Reconnect' : 'Connect Etsy'}
+        </a>
+      </div>
+
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
         <p className="text-sm text-warm-gray">
