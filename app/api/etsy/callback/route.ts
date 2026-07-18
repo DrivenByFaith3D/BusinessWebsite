@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { oauthHeaders, saveTokens, ETSY_SCOPES } from '@/lib/etsy-oauth'
+import { resolveShopId, etsyShopName } from '@/lib/etsy'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,17 +54,39 @@ export async function GET(req: NextRequest) {
     // Etsy access tokens are "{userId}.{token}".
     const userId = token.access_token.split('.')[0]
 
+    // getShopByOwnerUserId returns a single Shop object, but has been seen as an
+    // array/{results} too, so accept every shape rather than assume one.
+    let shopId: number | undefined
     const shopsRes = await fetch(`https://openapi.etsy.com/v3/application/users/${userId}/shops`, {
       headers: oauthHeaders(token.access_token),
     })
-    if (!shopsRes.ok) {
-      console.error('[etsy:callback] shop lookup failed', shopsRes.status, (await shopsRes.text()).slice(0, 300))
-      return back(req, { etsy: 'error' })
+    const shopsBody = await shopsRes.text()
+    if (shopsRes.ok) {
+      try {
+        const parsed = JSON.parse(shopsBody) as Record<string, unknown>
+        const asAny = parsed as { shop_id?: number; results?: { shop_id?: number }[] }
+        shopId =
+          asAny.shop_id ??
+          asAny.results?.[0]?.shop_id ??
+          (Array.isArray(parsed) ? (parsed[0] as { shop_id?: number })?.shop_id : undefined)
+      } catch {
+        /* fall through to the configured-shop fallback */
+      }
+    } else {
+      console.error('[etsy:callback] shop lookup', shopsRes.status, shopsBody.slice(0, 200))
     }
 
-    const shops = (await shopsRes.json()) as { results?: { shop_id: number }[] }
-    const shopId = shops.results?.[0]?.shop_id
-    if (!shopId) return back(req, { etsy: 'noshop' })
+    // Fall back to the shop configured for the public sync. The token can still be
+    // stored; a mismatched account would surface as a 403 when reading receipts.
+    if (!shopId) {
+      try {
+        shopId = await resolveShopId(etsyShopName())
+        console.warn('[etsy:callback] used configured shop fallback', shopId)
+      } catch {
+        console.error('[etsy:callback] no shop from lookup or fallback; body:', shopsBody.slice(0, 200))
+        return back(req, { etsy: 'noshop' })
+      }
+    }
 
     await saveTokens(String(shopId), token.access_token, token.refresh_token, token.expires_in, ETSY_SCOPES)
     return back(req, { etsy: 'connected' })
