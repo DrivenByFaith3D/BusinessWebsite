@@ -34,6 +34,7 @@ export interface EtsyOrderView {
   trackingCode: string | null
   carrier: string | null
   labelCost: number | null
+  etsyLabelCost: number | null
   etsyFees: number | null
   salesTax: number | null
   orderedAt: string
@@ -205,7 +206,8 @@ export default function EtsyOrdersClient({
                 const exact = o.etsyFees != null
                 const fees = exact ? (o.etsyFees as number) : estimateEtsyFees(o.grandTotal, itemCount)
                 const tax = o.salesTax ?? 0
-                const label = o.labelCost
+                // In-app (Shippo) label cost wins; else the Etsy-bought label cost from the ledger.
+                const label = o.labelCost ?? o.etsyLabelCost
                 const net = o.grandTotal != null ? o.grandTotal - fees - tax - (label ?? 0) : null
                 return (
                   <div className="mt-3 pt-3 border-t border-taupe/20 text-sm space-y-1">
@@ -226,7 +228,7 @@ export default function EtsyOrdersClient({
                     <div className="flex items-center justify-between text-warm-gray">
                       <span>Shipping label</span>
                       <span className={label != null ? 'text-red-600' : 'text-warm-gray/50'}>
-                        {label != null ? `−${money(label, o.currency)}` : 'not bought here'}
+                        {label != null ? `−${money(label, o.currency)}` : '—'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between pt-1 mt-1 border-t border-taupe/20 font-medium">

@@ -12,6 +12,7 @@ export interface LedgerEntry {
   description: string | null
   reference_type: string | null
   reference_id: number | null
+  created_timestamp: number
 }
 
 // Etsy caps a single ledger query at a 31-day window, so we walk the range in
@@ -88,4 +89,26 @@ export function computeOrderFees(order: OrderFeeInput, entries: LedgerEntry[]): 
 
   const processing = order.grandTotal ? processingFee(order.grandTotal) : 0
   return { etsyFees: r2(processing + txnFees + receiptFees), salesTax: r2(salesTax) }
+}
+
+// Etsy ledger shipping-label costs carry a label id, not a receipt id, so there
+// is no ID join back to an order. A label is bought to fulfil a specific order
+// after it's placed, so we attribute each label to the most recently placed
+// order at/before the label's purchase time. Returns orderId -> total label cost.
+// (Reliable when orders are spaced out; can misattribute between orders placed
+// within the same short span, though the combined total stays correct.)
+export function attributeShippingLabels(
+  orders: { id: string; orderedAt: Date }[],
+  entries: LedgerEntry[],
+): Map<string, number> {
+  const byTime = orders.map((o) => ({ id: o.id, t: Math.floor(o.orderedAt.getTime() / 1000) }))
+  const result = new Map<string, number>()
+  for (const e of entries) {
+    if (e.reference_type !== 'shipping_label' || (e.amount ?? 0) >= 0) continue
+    const candidates = byTime.filter((o) => o.t <= e.created_timestamp)
+    if (candidates.length === 0) continue
+    const target = candidates.reduce((a, b) => (b.t > a.t ? b : a))
+    result.set(target.id, r2((result.get(target.id) ?? 0) + Math.abs(e.amount) / 100))
+  }
+  return result
 }

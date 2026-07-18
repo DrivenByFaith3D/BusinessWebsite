@@ -4,7 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { EtsyNotConnectedError } from '@/lib/etsy-oauth'
 import { fetchReceipts, receiptTotal, receiptTracking, variationLabel } from '@/lib/etsy-orders'
-import { computeOrderFees, fetchLedgerEntries } from '@/lib/etsy-fees'
+import { attributeShippingLabels, computeOrderFees, fetchLedgerEntries } from '@/lib/etsy-fees'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -20,7 +20,7 @@ async function runOrderSync() {
   const productByListing = new Map(products.map((p) => [p.etsyListingId, p.id]))
 
   // Track each saved order so we can attach exact fees from the ledger below.
-  const feeTargets: { id: string; receiptId: string; grandTotal: number | null; transactionIds: string[] }[] = []
+  const feeTargets: { id: string; receiptId: string; grandTotal: number | null; transactionIds: string[]; orderedAt: Date; hasAppLabel: boolean }[] = []
   let earliest = Math.floor(Date.now() / 1000)
 
   let saved = 0
@@ -84,6 +84,8 @@ async function runOrderSync() {
       receiptId: String(r.receipt_id),
       grandTotal: data.grandTotal,
       transactionIds: txns.map((t) => String(t.transaction_id)),
+      orderedAt: order.orderedAt,
+      hasAppLabel: order.labelCost != null,
     })
     if (seconds && seconds < earliest) earliest = seconds
     saved++
@@ -95,13 +97,24 @@ async function runOrderSync() {
   if (feeTargets.length > 0) {
     try {
       const entries = await fetchLedgerEntries(earliest - 2 * 86400, Math.floor(Date.now() / 1000))
+      // Attribute Etsy-bought shipping labels to orders that weren't shipped in-app.
+      const labelByOrder = attributeShippingLabels(
+        feeTargets.filter((t) => !t.hasAppLabel).map((t) => ({ id: t.id, orderedAt: t.orderedAt })),
+        entries,
+      )
       for (const t of feeTargets) {
         const { etsyFees, salesTax } = computeOrderFees(t, entries)
+        const etsyLabelCost = t.hasAppLabel ? undefined : labelByOrder.get(t.id)
         // Only record once fees have actually posted (a brand-new order may show none yet).
-        if (etsyFees > 0 || salesTax > 0) {
+        if (etsyFees > 0 || salesTax > 0 || etsyLabelCost != null) {
           await prisma.etsyOrder.update({
             where: { id: t.id },
-            data: { etsyFees, salesTax, feesSyncedAt: new Date() },
+            data: {
+              etsyFees,
+              salesTax,
+              ...(etsyLabelCost != null ? { etsyLabelCost } : {}),
+              feesSyncedAt: new Date(),
+            },
           })
           feesUpdated++
         }

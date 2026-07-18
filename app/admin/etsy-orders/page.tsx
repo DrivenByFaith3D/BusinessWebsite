@@ -50,6 +50,7 @@ export default async function AdminEtsyOrdersPage() {
           trackingCode: o.trackingCode,
           carrier: o.carrier,
           labelCost: o.labelCost,
+          etsyLabelCost: o.etsyLabelCost,
           etsyFees: o.etsyFees,
           salesTax: o.salesTax,
           orderedAt: o.orderedAt.toISOString(),
