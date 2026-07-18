@@ -211,6 +211,7 @@ model Product {
   variations  ProductVariation[]
   reviews     Review[]
   etsyReviews EtsyReview[]
+  backInStock BackInStockSubscription[]
 }
 
 // A review left on Etsy, mirrored read-only. Kept separate from Review, which is
@@ -272,6 +273,10 @@ model Review {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   rating    Int
   comment   String?
+  // A customer-uploaded photo of the item they received.
+  imageUrl  String?
+  // True when the reviewer has a matching paid order for this product.
+  verified  Boolean  @default(false)
   createdAt DateTime @default(now())
 
   @@unique([productId, userId])
@@ -430,4 +435,28 @@ model Booking {
   name      String
   topic     String?
   createdAt DateTime         @default(now())
+}
+
+// Cross-instance rate limiting. One row per (action, client, time-window); the
+// count is bumped per request. Shared Postgres means serverless instances all
+// see the same counter, unlike the previous in-memory map.
+model RateLimit {
+  key       String   @id
+  count     Int      @default(0)
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}
+
+// A customer asking to be emailed when an out-of-stock product is available again.
+model BackInStockSubscription {
+  id          String    @id @default(cuid())
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  email       String
+  createdAt   DateTime  @default(now())
+  notifiedAt  DateTime?
+
+  @@unique([productId, email])
+  @@index([productId, notifiedAt])
 }

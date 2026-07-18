@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { useState, useEffect, useCallback } from 'react'
 import StarRating from '@/components/StarRating'
 import { useCart, MAX_QTY } from '@/components/CartProvider'
+import BackInStockForm from '@/components/BackInStockForm'
 
 interface Product {
   id: string
@@ -51,6 +52,7 @@ interface Review {
   createdAt: string
   source: 'site' | 'etsy'
   imageUrl: string | null
+  verified: boolean
 }
 
 const REGION: Record<string, string> = { US: 'the United States', GB: 'the United Kingdom', CA: 'Canada', AU: 'Australia' }
@@ -333,6 +335,8 @@ export default function ProductDetailClient({
         </button>
         {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
 
+        {soldOut && <BackInStockForm productId={product.id} />}
+
         {/* Shipping */}
         {hasShipping && (
           <div className="card p-5 mt-6">
@@ -415,6 +419,12 @@ export default function ProductDetailClient({
                   <div className="flex items-center gap-2 flex-wrap">
                     <StarRating value={r.rating} size="sm" />
                     <span className="text-xs text-charcoal font-medium">{r.author}</span>
+                    {r.verified && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-100 text-green-700 inline-flex items-center gap-0.5" title="Verified buyer">
+                        <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M16.7 5.3a1 1 0 010 1.4l-7 7a1 1 0 01-1.4 0l-3-3a1 1 0 011.4-1.4l2.3 2.29 6.3-6.29a1 1 0 011.4 0z" clipRule="evenodd" /></svg>
+                        Verified
+                      </span>
+                    )}
                     {r.source === 'etsy' && (
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-taupe/20 text-warm-gray">
                         via Etsy

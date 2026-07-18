@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   const { session, error } = await requireAuth()
   if (error) return error
 
-  const { success } = rateLimit(`contact:${session.user.id}`, 5, 60 * 60_000)
+  const { success } = await rateLimit(`contact:${session.user.id}`, 5, 60 * 60_000)
   if (!success) return NextResponse.json({ error: 'Too many messages sent. Please try again later.' }, { status: 429 })
 
   const { messageType, message, name } = await req.json()

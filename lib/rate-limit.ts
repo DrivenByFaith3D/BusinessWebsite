@@ -1,18 +1,32 @@
-// Simple in-memory sliding-window rate limiter
-// Works well for a single-instance deployment (Vercel serverless functions share no memory,
-// so this guards against bursts within a single function invocation chain, not cross-request DoS).
-// For multi-instance rate limiting, swap for @upstash/ratelimit.
+import { prisma } from './prisma'
 
-const store = new Map<string, number[]>()
-
-export function rateLimit(key: string, limit: number, windowMs: number): { success: boolean; remaining: number } {
+// Cross-instance sliding-ish rate limiter backed by Postgres. Because every
+// serverless instance shares the same database, a per-window counter row gives
+// real burst protection — unlike an in-memory map, which each instance keeps
+// separately and resets on cold start.
+//
+// The window is bucketed: key = `${name}:${bucket}` where bucket = floor(now/window).
+// We upsert-increment the row and compare against the limit. Rows carry an
+// expiresAt so they can be swept; expired buckets simply start counting fresh.
+export async function rateLimit(
+  name: string,
+  limit: number,
+  windowMs: number,
+): Promise<{ success: boolean; remaining: number }> {
   const now = Date.now()
-  const windowStart = now - windowMs
+  const bucket = Math.floor(now / windowMs)
+  const key = `${name}:${bucket}`
+  const expiresAt = new Date((bucket + 1) * windowMs)
 
-  const timestamps = (store.get(key) ?? []).filter((t) => t > windowStart)
-  timestamps.push(now)
-  store.set(key, timestamps)
-
-  const remaining = Math.max(0, limit - timestamps.length)
-  return { success: timestamps.length <= limit, remaining }
+  try {
+    const row = await prisma.rateLimit.upsert({
+      where: { key },
+      create: { key, count: 1, expiresAt },
+      update: { count: { increment: 1 } },
+    })
+    return { success: row.count <= limit, remaining: Math.max(0, limit - row.count) }
+  } catch {
+    // Fail open on a transient DB hiccup rather than block a legitimate user.
+    return { success: true, remaining: limit }
+  }
 }

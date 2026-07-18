@@ -38,3 +38,7 @@ next-env.d.ts
 .env.vercel
 .env.vercel.prod
 .env*
+
+# stray notes
+Untitled.rtf
+*.rtf

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { sendEmail, backInStockEmailHtml } from '@/lib/brevo'
 import {
   EtsyNotConfiguredError,
   etsyShopName,
@@ -63,6 +64,34 @@ async function syncReviews(shopId: number): Promise<number> {
   return saved
 }
 
+// Email pending back-in-stock subscribers for a product that just restocked,
+// then mark them notified so they aren't emailed again next sync.
+async function notifyBackInStock(productId: string, productName: string): Promise<void> {
+  const subs = await prisma.backInStockSubscription.findMany({
+    where: { productId, notifiedAt: null },
+    select: { id: true, email: true },
+  })
+  if (subs.length === 0) return
+
+  const appUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3000').trim()
+  const productUrl = `${appUrl}/listings/${productId}`
+  for (const sub of subs) {
+    try {
+      await sendEmail({
+        to: sub.email,
+        subject: `Back in stock: ${productName}`,
+        htmlContent: backInStockEmailHtml(productName, productUrl),
+      })
+    } catch (e) {
+      console.error('Back-in-stock email failed for', sub.email, e instanceof Error ? e.message : e)
+    }
+  }
+  await prisma.backInStockSubscription.updateMany({
+    where: { id: { in: subs.map((s) => s.id) } },
+    data: { notifiedAt: new Date() },
+  })
+}
+
 async function runSync(): Promise<SyncResult> {
   const shopId = await resolveShopId(etsyShopName())
   const listings = await fetchActiveListings(shopId)
@@ -120,6 +149,16 @@ async function runSync(): Promise<SyncResult> {
       ? await prisma.product.update({ where: { etsyListingId }, data })
       : await prisma.product.create({ data: { ...data, etsyListingId } })
     existing ? updated++ : created++
+
+    // Restocked? Email everyone who asked to be told. Best-effort — never let a
+    // notification failure abort the sync.
+    if (existing && !existing.inStock && data.inStock) {
+      try {
+        await notifyBackInStock(product.id, product.name)
+      } catch (e) {
+        console.error('Back-in-stock notify failed:', e instanceof Error ? e.message : e)
+      }
+    }
 
     // Replace gallery and variations wholesale: Etsy is the source of truth, and
     // reconciling individual rows is not worth the complexity at this size.

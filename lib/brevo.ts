@@ -72,6 +72,18 @@ export function productPurchaseBuyerEmailHtml(productName: string, amount: numbe
   )
 }
 
+export function backInStockEmailHtml(productName: string, productUrl: string) {
+  return baseTemplate(
+    `Back in stock: ${productName}`,
+    `
+      <p style="color: #374151;">Good news — <strong>${productName}</strong> is available again.</p>
+      <p style="color: #374151;">Stock can move quickly, so grab yours before it sells out.</p>
+    `,
+    productUrl,
+    'View & Order'
+  )
+}
+
 export function productPurchaseAdminEmailHtml(productName: string, amount: number, buyerEmail: string, appUrl: string) {
   return baseTemplate(
     `New product purchase: ${productName}`,

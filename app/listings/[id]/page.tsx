@@ -90,7 +90,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             author: r.user.name ?? r.user.email.split('@')[0],
             createdAt: r.createdAt.toISOString(),
             source: 'site' as const,
-            imageUrl: null,
+            imageUrl: r.imageUrl,
+            verified: r.verified,
           })),
           ...product.etsyReviews.map((r) => ({
             id: r.id,
@@ -101,6 +102,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             createdAt: r.reviewedAt.toISOString(),
             source: 'etsy' as const,
             imageUrl: r.imageUrl,
+            // Etsy only surfaces reviews from real purchasers, so they're verified too.
+            verified: true,
           })),
         ].sort((a, b) => b.createdAt.localeCompare(a.createdAt))}
       />

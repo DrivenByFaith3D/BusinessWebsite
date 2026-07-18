@@ -14,8 +14,8 @@ export default async function Navbar() {
       { label: 'Services', href: '/services-store' },
       { label: 'Shop', href: '/listings' },
       // Signed-in customers get their orders straight from the nav rather than
-      // buried in the account dropdown.
-      ...(isCustomer ? [{ label: 'My Orders', href: '/orders' }] : []),
+      // buried in the account dropdown; guests get a public tracking lookup.
+      ...(isCustomer ? [{ label: 'My Orders', href: '/orders' }] : [{ label: 'Track Order', href: '/track' }]),
       { label: 'About', href: '/about' },
       { label: 'Contact', href: '/contact' },
     ] : []),

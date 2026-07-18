@@ -16,6 +16,8 @@ export async function GET(req: NextRequest) {
     id: r.id,
     rating: r.rating,
     comment: r.comment,
+    imageUrl: r.imageUrl,
+    verified: r.verified,
     createdAt: r.createdAt,
     userName: r.user.name ?? 'Customer',
   })))
@@ -25,16 +27,26 @@ export async function POST(req: NextRequest) {
   const { session, error } = await requireAuth()
   if (error) return error
 
-  const { productId, rating, comment } = await req.json()
+  const { productId, rating, comment, imageUrl } = await req.json()
   if (!productId || !rating || rating < 1 || rating > 5) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
   }
 
-  // Must have a delivered order to review (optional enforcement)
+  // Verified buyer: this account has a paid shop order containing this product.
+  const purchased = await prisma.shopOrderItem.findFirst({
+    where: {
+      productId,
+      shopOrder: { userId: session.user.id, status: { in: ['paid', 'shipped', 'delivered'] } },
+    },
+    select: { id: true },
+  })
+  const verified = !!purchased
+  const photo = typeof imageUrl === 'string' && imageUrl.trim() ? imageUrl.trim() : null
+
   const review = await prisma.review.upsert({
     where: { productId_userId: { productId, userId: session.user.id } },
-    create: { productId, userId: session.user.id, rating, comment: comment?.trim() || null },
-    update: { rating, comment: comment?.trim() || null },
+    create: { productId, userId: session.user.id, rating, comment: comment?.trim() || null, imageUrl: photo, verified },
+    update: { rating, comment: comment?.trim() || null, imageUrl: photo, verified },
   })
 
   return NextResponse.json(review)

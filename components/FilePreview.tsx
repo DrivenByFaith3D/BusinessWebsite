@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Script from 'next/script'
+import { fileProxy } from '@/lib/files'
 
 const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp']
 const STL_EXTS = ['stl']
@@ -60,16 +61,19 @@ function ImagePreview({ url, name }: { url: string; name: string }) {
 }
 
 export default function FilePreview({ url, name }: { url: string; name: string }) {
+  // Extension comes from the original url/name; the loadable src goes through
+  // the authorized proxy (the proxy path itself has no file extension).
   const ext = getExt(name, url)
   const displayName = name || 'Uploaded file'
+  const src = fileProxy(url)
 
   if (IMAGE_EXTS.includes(ext)) {
     return (
       <div className="space-y-1.5">
-        <ImagePreview url={url} name={displayName} />
+        <ImagePreview url={src} name={displayName} />
         <div className="flex items-center justify-between">
           <span className="text-xs text-warm-gray truncate">{displayName}</span>
-          <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-warm-gray hover:text-charcoal transition-colors shrink-0 ml-2">
+          <a href={src} target="_blank" rel="noopener noreferrer" className="text-xs text-warm-gray hover:text-charcoal transition-colors shrink-0 ml-2">
             Download ↓
           </a>
         </div>
@@ -80,10 +84,10 @@ export default function FilePreview({ url, name }: { url: string; name: string }
   if (STL_EXTS.includes(ext)) {
     return (
       <div className="space-y-1.5">
-        <ModelViewer url={url} name={displayName} />
+        <ModelViewer url={src} name={displayName} />
         <div className="flex items-center justify-between">
           <span className="text-xs text-warm-gray truncate">{displayName}</span>
-          <a href={url} target="_blank" rel="noopener noreferrer" className="text-xs text-warm-gray hover:text-charcoal transition-colors shrink-0 ml-2">
+          <a href={src} target="_blank" rel="noopener noreferrer" className="text-xs text-warm-gray hover:text-charcoal transition-colors shrink-0 ml-2">
             Download ↓
           </a>
         </div>
@@ -93,7 +97,7 @@ export default function FilePreview({ url, name }: { url: string; name: string }
 
   // Fallback: download link
   return (
-    <a href={url} target="_blank" rel="noopener noreferrer"
+    <a href={src} target="_blank" rel="noopener noreferrer"
       className="flex items-center gap-3 p-2 rounded-lg hover:bg-zinc-800 transition-colors text-sm">
       <svg className="w-5 h-5 text-warm-gray shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

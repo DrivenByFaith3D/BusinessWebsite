@@ -8,7 +8,7 @@ import { VERIFICATION_TTL_MS } from '@/lib/verification'
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for') ?? 'unknown'
-  const { success } = rateLimit(`signup:${ip}`, 5, 60 * 60 * 1000)
+  const { success } = await rateLimit(`signup:${ip}`, 5, 60 * 60 * 1000)
   if (!success) return NextResponse.json({ error: 'Too many signups. Try again later.' }, { status: 429 })
 
   const { email, password, name, street, city, state, zip } = await req.json()

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { fileProxy } from '@/lib/files'
 
 interface ChatMessage {
   id: string
@@ -121,7 +122,7 @@ export default function MessageBubble({ message, isOwn, groupWithPrev, onEdit, o
           }`}>
             {message.content}
             {message.fileUrl && (
-              <a href={message.fileUrl} target="_blank" rel="noopener noreferrer"
+              <a href={fileProxy(message.fileUrl)} target="_blank" rel="noopener noreferrer"
                 className={`mt-2 flex items-center gap-1 text-xs underline ${isOwn ? 'text-white/80 hover:text-white' : 'text-warm-gray hover:text-charcoal'}`}>
                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}

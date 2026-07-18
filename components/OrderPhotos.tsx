@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { fileProxy } from '@/lib/files'
 
 interface Photo {
   id: string
@@ -25,7 +26,7 @@ export default function OrderPhotos({ photos }: { photos: Photo[] }) {
               onClick={() => setExpanded(photo.url)}
             >
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={photo.url} alt="Order photo" className="w-full h-full object-cover" />
+              <img src={fileProxy(photo.url)} alt="Order photo" className="w-full h-full object-cover" />
             </div>
           ))}
         </div>
@@ -36,7 +37,7 @@ export default function OrderPhotos({ photos }: { photos: Photo[] }) {
           onClick={() => setExpanded(null)}
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={expanded} alt="Order photo" className="max-w-full max-h-full object-contain" />
+          <img src={fileProxy(expanded)} alt="Order photo" className="max-w-full max-h-full object-contain" />
         </div>
       )}
     </>

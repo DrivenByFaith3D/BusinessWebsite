@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   const { session, error } = await requireAuth()
   if (error) return error
 
-  const { success } = rateLimit(`msg:${session.user.id}`, 30, 60_000)
+  const { success } = await rateLimit(`msg:${session.user.id}`, 30, 60_000)
   if (!success) return NextResponse.json({ error: 'Sending too fast. Please slow down.' }, { status: 429 })
 
   const { orderId, content, fileUrl } = await req.json()

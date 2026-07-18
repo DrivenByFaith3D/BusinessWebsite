@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   const { session, error } = await requireAuth()
   if (error) return error
 
-  const { success } = rateLimit(`order:${session.user.id}`, 10, 60 * 60_000)
+  const { success } = await rateLimit(`order:${session.user.id}`, 10, 60 * 60_000)
   if (!success) return NextResponse.json({ error: 'Too many orders submitted. Try again later.' }, { status: 429 })
 
   const { description, orderType, quantity } = await req.json()
