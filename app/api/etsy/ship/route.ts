@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   const { error } = await requireAdmin()
   if (error) return error
 
-  const { etsyOrderId, rateId, carrier, trackingCode } = await req.json()
+  const { etsyOrderId, rateId, carrier, trackingCode, labelCost } = await req.json()
   if (!etsyOrderId) return NextResponse.json({ error: 'Missing etsyOrderId' }, { status: 400 })
 
   const order = await prisma.etsyOrder.findUnique({ where: { id: etsyOrderId } })
@@ -24,6 +24,7 @@ export async function POST(req: NextRequest) {
   let finalTracking = typeof trackingCode === 'string' ? trackingCode.trim() : ''
   let finalCarrier = typeof carrier === 'string' ? carrier : ''
   let labelUrl: string | null = null
+  let finalLabelCost: number | null = null
 
   try {
     // Path 1: buy the label through Shippo and take its tracking number.
@@ -35,6 +36,10 @@ export async function POST(req: NextRequest) {
       finalTracking = transaction.tracking_number
       finalCarrier = finalCarrier || 'usps'
       labelUrl = transaction.label_url ?? null
+      // Prefer the amount Shippo actually charged; fall back to the picked rate.
+      const charged = parseFloat(transaction.rate?.amount ?? '')
+      const picked = parseFloat(typeof labelCost === 'string' || typeof labelCost === 'number' ? String(labelCost) : '')
+      finalLabelCost = !Number.isNaN(charged) ? charged : !Number.isNaN(picked) ? picked : null
     }
 
     if (!finalTracking) {
@@ -51,6 +56,7 @@ export async function POST(req: NextRequest) {
         trackingCode: finalTracking,
         carrier: etsyCarrierName(finalCarrier),
         ...(labelUrl ? { labelUrl } : {}),
+        ...(finalLabelCost != null ? { labelCost: finalLabelCost } : {}),
       },
     })
 

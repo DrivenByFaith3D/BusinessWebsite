@@ -339,6 +339,7 @@ model EtsyOrder {
   trackingCode     String?
   carrier          String?
   labelUrl         String?
+  labelCost        Float?
   orderedAt        DateTime
   syncedAt         DateTime @default(now())
 

@@ -49,6 +49,7 @@ export default async function AdminEtsyOrdersPage() {
           messageFromBuyer: o.messageFromBuyer,
           trackingCode: o.trackingCode,
           carrier: o.carrier,
+          labelCost: o.labelCost,
           orderedAt: o.orderedAt.toISOString(),
           items: o.items.map((i) => ({
             id: i.id,

@@ -33,8 +33,20 @@ export interface EtsyOrderView {
   messageFromBuyer: string | null
   trackingCode: string | null
   carrier: string | null
+  labelCost: number | null
   orderedAt: string
   items: Item[]
+}
+
+// Etsy's standard US seller fees, estimated from the order total:
+//   6.5% transaction fee + 3% + $0.25 payment processing + $0.20 per item listing fee.
+// It's an estimate — real fees vary with offsite ads, taxes, and international rates.
+function estimateEtsyFees(grandTotal: number | null, itemCount: number): number {
+  if (!grandTotal) return 0
+  const transaction = grandTotal * 0.065
+  const processing = grandTotal * 0.03 + 0.25
+  const listing = itemCount * 0.2
+  return transaction + processing + listing
 }
 
 export default function EtsyOrdersClient({
@@ -183,6 +195,36 @@ export default function EtsyOrdersClient({
                   )
                 )}
               </div>
+
+              {/* Cost breakdown */}
+              {(() => {
+                const itemCount = o.items.reduce((s, i) => s + i.quantity, 0)
+                const fees = estimateEtsyFees(o.grandTotal, itemCount)
+                const label = o.labelCost
+                const net = o.grandTotal != null ? o.grandTotal - fees - (label ?? 0) : null
+                return (
+                  <div className="mt-3 pt-3 border-t border-taupe/20 text-sm space-y-1">
+                    <div className="flex items-center justify-between text-warm-gray">
+                      <span>Buyer paid</span>
+                      <span className="text-charcoal/85">{money(o.grandTotal, o.currency)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-warm-gray">
+                      <span>Etsy fees <span className="text-warm-gray/60">(est.)</span></span>
+                      <span className="text-red-600">−{money(fees, o.currency)}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-warm-gray">
+                      <span>Shipping label</span>
+                      <span className={label != null ? 'text-red-600' : 'text-warm-gray/50'}>
+                        {label != null ? `−${money(label, o.currency)}` : 'not bought here'}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between pt-1 mt-1 border-t border-taupe/20 font-medium">
+                      <span className="text-charcoal">Net {label == null ? <span className="text-warm-gray/60 font-normal">(before shipping)</span> : ''}</span>
+                      <span className={net != null && net < 0 ? 'text-red-600' : 'text-green-700'}>{money(net, o.currency)}</span>
+                    </div>
+                  </div>
+                )
+              })()}
 
               {o.messageFromBuyer && (
                 <p className="mt-3 text-xs text-warm-gray bg-taupe/10 rounded-lg px-3 py-2">

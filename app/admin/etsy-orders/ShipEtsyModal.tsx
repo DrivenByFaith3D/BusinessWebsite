@@ -73,7 +73,7 @@ export default function ShipEtsyModal({
       const res = await fetch('/api/etsy/ship', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ etsyOrderId: order.id, rateId: selectedRate.id, carrier: selectedRate.carrier }),
+        body: JSON.stringify({ etsyOrderId: order.id, rateId: selectedRate.id, carrier: selectedRate.carrier, labelCost: selectedRate.amount }),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Shipping failed.'); setLoading(false); return }
