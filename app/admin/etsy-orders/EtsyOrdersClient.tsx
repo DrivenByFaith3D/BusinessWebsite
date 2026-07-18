@@ -34,6 +34,8 @@ export interface EtsyOrderView {
   trackingCode: string | null
   carrier: string | null
   labelCost: number | null
+  etsyFees: number | null
+  salesTax: number | null
   orderedAt: string
   items: Item[]
 }
@@ -199,17 +201,26 @@ export default function EtsyOrdersClient({
               {/* Cost breakdown */}
               {(() => {
                 const itemCount = o.items.reduce((s, i) => s + i.quantity, 0)
-                const fees = estimateEtsyFees(o.grandTotal, itemCount)
+                // Prefer exact fees from Etsy's ledger; fall back to an estimate until they post.
+                const exact = o.etsyFees != null
+                const fees = exact ? (o.etsyFees as number) : estimateEtsyFees(o.grandTotal, itemCount)
+                const tax = o.salesTax ?? 0
                 const label = o.labelCost
-                const net = o.grandTotal != null ? o.grandTotal - fees - (label ?? 0) : null
+                const net = o.grandTotal != null ? o.grandTotal - fees - tax - (label ?? 0) : null
                 return (
                   <div className="mt-3 pt-3 border-t border-taupe/20 text-sm space-y-1">
                     <div className="flex items-center justify-between text-warm-gray">
                       <span>Buyer paid</span>
                       <span className="text-charcoal/85">{money(o.grandTotal, o.currency)}</span>
                     </div>
+                    {tax > 0 && (
+                      <div className="flex items-center justify-between text-warm-gray">
+                        <span>Sales tax <span className="text-warm-gray/60">(Etsy remits)</span></span>
+                        <span className="text-warm-gray">−{money(tax, o.currency)}</span>
+                      </div>
+                    )}
                     <div className="flex items-center justify-between text-warm-gray">
-                      <span>Etsy fees <span className="text-warm-gray/60">(est.)</span></span>
+                      <span>Etsy fees {exact ? '' : <span className="text-amber-600">(est.)</span>}</span>
                       <span className="text-red-600">−{money(fees, o.currency)}</span>
                     </div>
                     <div className="flex items-center justify-between text-warm-gray">

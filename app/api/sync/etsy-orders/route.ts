@@ -4,6 +4,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { EtsyNotConnectedError } from '@/lib/etsy-oauth'
 import { fetchReceipts, receiptTotal, receiptTracking, variationLabel } from '@/lib/etsy-orders'
+import { computeOrderFees, fetchLedgerEntries } from '@/lib/etsy-fees'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -17,6 +18,10 @@ async function runOrderSync() {
     select: { id: true, etsyListingId: true },
   })
   const productByListing = new Map(products.map((p) => [p.etsyListingId, p.id]))
+
+  // Track each saved order so we can attach exact fees from the ledger below.
+  const feeTargets: { id: string; receiptId: string; grandTotal: number | null; transactionIds: string[] }[] = []
+  let earliest = Math.floor(Date.now() / 1000)
 
   let saved = 0
   for (const r of receipts) {
@@ -73,10 +78,40 @@ async function runOrderSync() {
         })),
       })
     }
+
+    feeTargets.push({
+      id: order.id,
+      receiptId: String(r.receipt_id),
+      grandTotal: data.grandTotal,
+      transactionIds: txns.map((t) => String(t.transaction_id)),
+    })
+    if (seconds && seconds < earliest) earliest = seconds
     saved++
   }
 
-  return { orders: saved }
+  // Exact fees: pull the ledger once for the whole window, attribute per order.
+  // Best-effort — a ledger hiccup shouldn't fail the order sync itself.
+  let feesUpdated = 0
+  if (feeTargets.length > 0) {
+    try {
+      const entries = await fetchLedgerEntries(earliest - 2 * 86400, Math.floor(Date.now() / 1000))
+      for (const t of feeTargets) {
+        const { etsyFees, salesTax } = computeOrderFees(t, entries)
+        // Only record once fees have actually posted (a brand-new order may show none yet).
+        if (etsyFees > 0 || salesTax > 0) {
+          await prisma.etsyOrder.update({
+            where: { id: t.id },
+            data: { etsyFees, salesTax, feesSyncedAt: new Date() },
+          })
+          feesUpdated++
+        }
+      }
+    } catch (e) {
+      console.error('Etsy fee sync (ledger) failed:', e instanceof Error ? e.message : e)
+    }
+  }
+
+  return { orders: saved, fees: feesUpdated }
 }
 
 function fail(e: unknown) {

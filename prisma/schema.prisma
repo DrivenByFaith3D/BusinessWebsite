@@ -340,6 +340,10 @@ model EtsyOrder {
   carrier          String?
   labelUrl         String?
   labelCost        Float?
+  // Exact Etsy fees for this order, summed from the payment-account ledger.
+  etsyFees         Float?
+  salesTax         Float?
+  feesSyncedAt     DateTime?
   orderedAt        DateTime
   syncedAt         DateTime @default(now())
 

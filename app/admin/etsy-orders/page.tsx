@@ -50,6 +50,8 @@ export default async function AdminEtsyOrdersPage() {
           trackingCode: o.trackingCode,
           carrier: o.carrier,
           labelCost: o.labelCost,
+          etsyFees: o.etsyFees,
+          salesTax: o.salesTax,
           orderedAt: o.orderedAt.toISOString(),
           items: o.items.map((i) => ({
             id: i.id,
