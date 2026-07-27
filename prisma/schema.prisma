@@ -50,6 +50,10 @@ model Order {
   depositPaid    Boolean   @default(false)
   depositWaived  Boolean   @default(false)
   stripeSessionId String?
+  // Sales tax collected on this order (from Stripe for card, computed for check),
+  // and when it was paid — used for the quarterly tax-to-remit total.
+  taxCollected   Float?
+  paidAt         DateTime?
   createdAt      DateTime @default(now())
   archivedAt     DateTime?
   deletedAt      DateTime?
@@ -314,6 +318,7 @@ model ShopOrder {
   email           String?
   status          String    @default("pending") // pending | paid | shipped | delivered | cancelled
   total           Float
+  taxCollected    Float?
   stripeSessionId String?   @unique
   createdAt       DateTime  @default(now())
   paidAt          DateTime?

@@ -323,7 +323,7 @@ export default function NewOrderPage() {
           <div>
             <label className="block text-sm font-medium text-charcoal mb-1">Quantity</label>
             <div className="flex items-center gap-3">
-              <QuantityStepper value={quantity} onChange={setQuantity} min={1} max={99} />
+              <QuantityStepper value={quantity} onChange={setQuantity} min={1} max={9999} />
               {quantity > 1 && <span className="text-xs text-warm-gray">Ordering multiple of the same item</span>}
             </div>
           </div>

@@ -3,6 +3,7 @@ import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
+import { quarterStart, quarterLabel, taxEnabled } from '@/lib/tax'
 
 export const dynamic = 'force-dynamic'
 
@@ -31,6 +32,15 @@ export default async function AdminPage() {
       select: { id: true, name: true, inStock: true, variations: { select: { label: true, quantity: true, isEnabled: true } } },
     }),
   ])
+
+  // Website sales tax we collected this quarter and must remit to NJ ourselves
+  // (Etsy remits its own, so it's excluded here).
+  const qStart = quarterStart()
+  const [orderTax, shopTax] = await Promise.all([
+    prisma.order.aggregate({ _sum: { taxCollected: true }, where: { paidAt: { gte: qStart } } }),
+    prisma.shopOrder.aggregate({ _sum: { taxCollected: true }, where: { paidAt: { gte: qStart } } }),
+  ])
+  const taxToRemit = (orderTax._sum.taxCollected ?? 0) + (shopTax._sum.taxCollected ?? 0)
 
   const counts = {
     pending: orders.filter((o) => o.status === 'pending').length,
@@ -70,6 +80,19 @@ export default async function AdminPage() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
       <h1 className="text-2xl font-bold text-charcoal mb-8">Admin Dashboard</h1>
+
+      {/* Sales tax to remit (website sales; Etsy remits its own) */}
+      <div className="card p-5 mb-8 flex items-center justify-between gap-4 flex-wrap border-l-4 border-l-amber-400">
+        <div>
+          <p className="text-sm font-semibold uppercase tracking-wide text-warm-gray">Sales tax to remit · {quarterLabel()}</p>
+          <p className="text-xs text-warm-gray/70 mt-0.5">
+            {taxEnabled()
+              ? 'Website (Stripe + check) sales tax you collected this quarter and owe NJ. Etsy remits its own.'
+              : 'Turn on Stripe Tax to start collecting website sales tax.'}
+          </p>
+        </div>
+        <p className="text-3xl font-bold text-charcoal">${taxToRemit.toFixed(2)}</p>
+      </div>
 
       {/* Profit summary (Etsy) */}
       <h2 className="text-sm font-semibold uppercase tracking-wide text-warm-gray mb-3">Etsy profit</h2>

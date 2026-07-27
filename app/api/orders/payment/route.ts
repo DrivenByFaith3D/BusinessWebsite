@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/api'
 import { logOrderEvent } from '@/lib/events'
+import { njTax, taxEnabled } from '@/lib/tax'
 
 // Customer + admin actions around check payment.
 export async function POST(req: NextRequest) {
@@ -29,11 +30,15 @@ export async function POST(req: NextRequest) {
   if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   if (action === 'mark_paid') {
+    // Check payments aren't run through Stripe, so compute the NJ tax we collected.
+    const tax = taxEnabled() && order.quote != null ? njTax(order.quote) : null
     const updated = await prisma.order.update({
       where: { id: orderId },
       data: {
         paymentStatus: 'paid',
         status: order.status === 'pending' ? 'in_progress' : order.status,
+        paidAt: new Date(),
+        ...(tax != null ? { taxCollected: tax } : {}),
       },
     })
     await logOrderEvent(orderId, 'payment_received', 'Payment received in full (check)')

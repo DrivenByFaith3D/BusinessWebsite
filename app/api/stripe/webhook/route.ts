@@ -34,11 +34,22 @@ export async function POST(req: NextRequest) {
     const session = event.data.object as Stripe.Checkout.Session
     const { orderId, shopOrderId, productName } = session.metadata ?? {}
 
+    // Sales tax Stripe collected on this session (cents -> dollars), if any.
+    const taxCollected = session.total_details?.amount_tax != null
+      ? Math.round(session.total_details.amount_tax) / 100
+      : null
+
     if (orderId && session.payment_status === 'paid') {
       // Full custom order payment (paid in full by card)
       const order = await prisma.order.update({
         where: { id: orderId },
-        data: { paymentStatus: 'paid', paymentMethod: 'card', status: 'in_progress' },
+        data: {
+          paymentStatus: 'paid',
+          paymentMethod: 'card',
+          status: 'in_progress',
+          paidAt: new Date(),
+          ...(taxCollected != null ? { taxCollected } : {}),
+        },
         select: { userId: true },
       })
       await logOrderEvent(orderId, 'payment_received', 'Payment received')
@@ -59,6 +70,7 @@ export async function POST(req: NextRequest) {
         data: {
           status: 'paid',
           paidAt: new Date(),
+          ...(taxCollected != null ? { taxCollected } : {}),
           ...(buyerEmail ? { email: buyerEmail } : {}),
         },
       }).catch((e) => console.error('Shop order update failed:', e))

@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
+import { taxEnabled, NJ_SALES_TAX_RATE } from '@/lib/tax'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import ChatWindow from '@/components/ChatWindow'
@@ -127,6 +128,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           orderId={order.id}
           quote={order.quote}
           paymentMethod={order.paymentMethod}
+          taxRate={taxEnabled() ? NJ_SALES_TAX_RATE : 0}
         />
       )}
 
