@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
-import { taxEnabled, NJ_SALES_TAX_RATE } from '@/lib/tax'
+import { taxEnabled, NJ_SALES_TAX_RATE, isNJ } from '@/lib/tax'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import ChatWindow from '@/components/ChatWindow'
@@ -35,6 +35,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
   if (!order) notFound()
   if (!isAdmin && order.userId !== session.user.id) notFound()
+
+  // For check payments we tax only NJ customers, judged by their address on file.
+  const custAddr = await prisma.address.findFirst({
+    where: { userId: order.userId },
+    orderBy: { isDefault: 'desc' },
+    select: { state: true },
+  })
+  const customerInNJ = isNJ(custAddr?.state)
 
   const messages = await prisma.message.findMany({
     where: { orderId: id },
@@ -130,6 +138,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           paymentMethod={order.paymentMethod}
           taxRate={taxEnabled() ? NJ_SALES_TAX_RATE : 0}
           taxExempt={order.taxExempt}
+          customerInNJ={customerInNJ}
         />
       )}
 

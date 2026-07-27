@@ -8,13 +8,17 @@ interface Props {
   paymentMethod: string | null
   taxRate?: number
   taxExempt?: boolean
+  customerInNJ?: boolean
 }
 
 const money = (n: number) => `$${n.toFixed(2)}`
 
-export default function CheckoutOptions({ orderId, quote, paymentMethod, taxRate = 0, taxExempt = false }: Props) {
-  const effectiveRate = taxExempt ? 0 : taxRate
-  const tax = Math.round(quote * effectiveRate * 100) / 100
+export default function CheckoutOptions({ orderId, quote, paymentMethod, taxRate = 0, taxExempt = false, customerInNJ = false }: Props) {
+  // Card: Stripe adds tax by the billing address entered at checkout (NJ only).
+  const cardTaxable = !taxExempt && taxRate > 0
+  // Check: no address engine, so we tax only if the customer's address on file is NJ.
+  const checkRate = !taxExempt && customerInNJ ? taxRate : 0
+  const tax = Math.round(quote * checkRate * 100) / 100
   const checkTotal = quote + tax
   const [tab, setTab] = useState<'card' | 'check'>(paymentMethod === 'check' ? 'check' : 'card')
   const [checkChosen, setCheckChosen] = useState(paymentMethod === 'check')
@@ -90,10 +94,10 @@ export default function CheckoutOptions({ orderId, quote, paymentMethod, taxRate
         <div>
           <p className="text-warm-gray text-sm mb-4">
             Pay the full {money(quote)} securely by card and we&apos;ll begin right away.
-            {effectiveRate > 0 && <span className="block mt-1">Sales tax is added at checkout based on your address.</span>}
+            {cardTaxable && <span className="block mt-1">Sales tax is added at checkout for NJ billing addresses.</span>}
           </p>
           <button onClick={payByCard} disabled={loading !== null} className="btn-primary">
-            {loading === 'full' ? 'Redirecting…' : `Pay ${money(quote)}${effectiveRate > 0 ? ' + tax' : ''} by card`}
+            {loading === 'full' ? 'Redirecting…' : `Pay ${money(quote)}${cardTaxable ? ' + tax' : ''} by card`}
           </button>
         </div>
       ) : (
@@ -101,12 +105,15 @@ export default function CheckoutOptions({ orderId, quote, paymentMethod, taxRate
           {/* Full-payment-before-printing notice */}
           <div className="rounded-xl bg-taupe/15 border border-taupe/40 p-4 mb-4">
             <p className="text-sm text-charcoal font-medium mb-1">Full payment is required before we print.</p>
-            {effectiveRate > 0 && (
+            {tax > 0 && (
               <div className="text-sm text-warm-gray mb-2 space-y-0.5">
                 <div className="flex justify-between"><span>Subtotal</span><span className="text-charcoal">{money(quote)}</span></div>
                 <div className="flex justify-between"><span>NJ sales tax (6.625%)</span><span className="text-charcoal">{money(tax)}</span></div>
                 <div className="flex justify-between font-semibold pt-1 border-t border-taupe/30"><span className="text-charcoal">Total</span><span className="text-charcoal">{money(checkTotal)}</span></div>
               </div>
+            )}
+            {!taxExempt && taxRate > 0 && !customerInNJ && (
+              <p className="text-xs text-warm-gray/80 mb-2">No NJ sales tax (your address is outside NJ). You may owe use tax in your own state.</p>
             )}
             <p className="text-sm text-warm-gray leading-relaxed">
               Mail a check for the full <span className="text-charcoal font-semibold">{money(checkTotal)}</span>.

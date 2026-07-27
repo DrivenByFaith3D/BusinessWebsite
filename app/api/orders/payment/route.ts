@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/api'
 import { logOrderEvent } from '@/lib/events'
-import { njTax, taxEnabled } from '@/lib/tax'
+import { njTax, taxEnabled, isNJ } from '@/lib/tax'
 
 // Customer + admin actions around check payment.
 export async function POST(req: NextRequest) {
@@ -38,9 +38,15 @@ export async function POST(req: NextRequest) {
   }
 
   if (action === 'mark_paid') {
-    // Check payments aren't run through Stripe, so compute the NJ tax we collected
-    // (skipped entirely for tax-exempt buyers with a certificate on file).
-    const tax = taxEnabled() && !order.taxExempt && order.quote != null ? njTax(order.quote) : null
+    // Check payments aren't run through Stripe. Tax applies only to NJ customers
+    // (by their address on file) and never to tax-exempt buyers.
+    const custAddr = await prisma.address.findFirst({
+      where: { userId: order.userId },
+      orderBy: { isDefault: 'desc' },
+      select: { state: true },
+    })
+    const collectTax = taxEnabled() && !order.taxExempt && isNJ(custAddr?.state) && order.quote != null
+    const tax = collectTax ? njTax(order.quote as number) : null
     const updated = await prisma.order.update({
       where: { id: orderId },
       data: {
