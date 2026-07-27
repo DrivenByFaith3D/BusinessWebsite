@@ -106,6 +106,9 @@ export async function POST(req: NextRequest) {
         name: variationLabel ? `${product.name} (${variationLabel})` : product.name,
         description: product.description?.slice(0, 500) ?? undefined,
         ...(product.imageUrl ? { images: [product.imageUrl] } : {}),
+        // Physical 3D print = tangible goods, so it's taxed correctly (the account
+        // default code is non-taxable in NJ and returned $0).
+        tax_code: 'txcd_99999999',
       },
       unit_amount: Math.round(unitPrice * 100),
       // Prices are pre-tax; Stripe Tax adds tax on top when enabled.

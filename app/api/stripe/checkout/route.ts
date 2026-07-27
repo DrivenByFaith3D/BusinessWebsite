@@ -40,6 +40,9 @@ export async function POST(req: NextRequest) {
               name: `3D Print Order ${formatOrderId(order)}`,
               description: order.description.slice(0, 200),
               images: [`${appUrl}/logo.png`],
+              // Custom print is tangible goods, taxable in NJ (unlike the account
+              // default code, which returns $0).
+              tax_code: 'txcd_99999999',
             },
             unit_amount: unitAmount,
             tax_behavior: 'exclusive' as const,
