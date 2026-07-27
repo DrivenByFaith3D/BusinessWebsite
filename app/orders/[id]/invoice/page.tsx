@@ -21,7 +21,8 @@ const CSS = `
 .inv-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:22px}
 .inv-back{font-size:14px;color:#7D756D;text-decoration:none}
 .inv-back:hover{color:#2C2C2C}
-.inv-sheet{background:#fff;padding:56px 60px 48px;border-radius:2px;box-shadow:0 4px 24px rgba(0,0,0,.08);color:#2C2C2C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif}
+.inv-sheet{background:#fff;padding:56px 60px 48px;border-radius:2px;box-shadow:0 4px 24px rgba(0,0,0,.08);color:#2C2C2C;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;display:flex;flex-direction:column;min-height:920px}
+.inv-foot{margin-top:auto;padding-top:28px}
 .inv-head{text-align:center;padding-bottom:26px;border-bottom:2px solid #2C2C2C}
 .inv-head img{height:64px;width:64px;object-fit:contain;margin:0 auto 10px;display:block}
 .inv-brand{font-size:24px;font-weight:700;letter-spacing:.5px}
@@ -55,10 +56,15 @@ const CSS = `
 .inv-notes p{font-size:13px;line-height:1.6;color:#2C2C2C;margin:0}
 .inv-thanks{text-align:center;font-size:12px;color:#7D756D;margin-top:40px;letter-spacing:.02em}
 @media print{
-  @page{margin:0}
-  .inv-toolbar{display:none!important}
-  .inv-wrap{max-width:none}
-  .inv-sheet{box-shadow:none;border-radius:0;padding:.6in .7in}
+  @page{size:letter;margin:.5in}
+  /* Collapse the app's full-height flex layout so it doesn't paginate. */
+  html,body{height:auto!important;min-height:0!important;margin:0!important;padding:0!important;background:#fff!important}
+  body{display:block!important}
+  main{flex:none!important;display:block!important;min-height:0!important}
+  nav,footer,.no-print,.inv-toolbar{display:none!important}
+  .inv-page{padding:0!important;margin:0!important}
+  .inv-wrap{max-width:none;margin:0}
+  .inv-sheet{box-shadow:none;border-radius:0;padding:0;min-height:9.3in}
 }
 `
 
@@ -83,7 +89,11 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const customerInNJ = isNJ(custAddr?.state)
 
   const quote = order.quote ?? 0
-  const itemLabel = order.invoiceItemLabel || order.description
+  // Strip internal tags from the raw request for a clean customer-facing line item:
+  // the leading "[Design & Print, $12/print hr]" and any "(/listings/…)" links.
+  const cleanDescription = (d: string) =>
+    d.replace(/^\s*\[[^\]]*\]\s*/, '').replace(/\s*\(\/listings\/[^)]*\)/g, '').trim()
+  const itemLabel = order.invoiceItemLabel || cleanDescription(order.description)
 
   let taxLabel: string
   let taxAmount: number
@@ -101,7 +111,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
   const paid = order.paymentStatus === 'paid'
 
   return (
-    <div className="px-4 sm:px-6 lg:px-8 py-10">
+    <div className="inv-page px-4 sm:px-6 lg:px-8 py-10">
       <style dangerouslySetInnerHTML={{ __html: CSS }} />
       <div className="inv-wrap">
         <div className="inv-toolbar">
@@ -126,7 +136,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt={SHOP.name} />
             <div className="inv-brand">{SHOP.name}</div>
-            <div className="inv-brand-sub">{SHOP.street} · {SHOP.cityLine}<br />{SHOP.email}</div>
+            <div className="inv-brand-sub">{SHOP.email}</div>
           </div>
 
           <div className="inv-meta">
@@ -157,22 +167,24 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             </tbody>
           </table>
 
-          <div className="inv-totals">
-            <div className="box">
-              <div className="inv-trow"><span>Subtotal</span><span>{money(quote)}</span></div>
-              <div className="inv-trow"><span>{taxLabel}</span><span>{order.taxExempt ? 'Exempt' : money(taxAmount)}</span></div>
-              <div className="inv-trow grand"><span>Total</span><span>{money(total)}</span></div>
+          <div className="inv-foot">
+            <div className="inv-totals">
+              <div className="box">
+                <div className="inv-trow"><span>Subtotal</span><span>{money(quote)}</span></div>
+                <div className="inv-trow"><span>{taxLabel}</span><span>{order.taxExempt ? 'Exempt' : money(taxAmount)}</span></div>
+                <div className="inv-trow grand"><span>Total</span><span>{money(total)}</span></div>
+              </div>
             </div>
+
+            {order.invoiceNotes && (
+              <div className="inv-notes">
+                <div className="inv-label">Notes</div>
+                <p>{order.invoiceNotes}</p>
+              </div>
+            )}
+
+            <div className="inv-thanks">Thank you for choosing {SHOP.name}.</div>
           </div>
-
-          {order.invoiceNotes && (
-            <div className="inv-notes">
-              <div className="inv-label">Notes</div>
-              <p>{order.invoiceNotes}</p>
-            </div>
-          )}
-
-          <div className="inv-thanks">Thank you for choosing {SHOP.name}.</div>
         </div>
       </div>
     </div>
