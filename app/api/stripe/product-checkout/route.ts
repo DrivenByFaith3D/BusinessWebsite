@@ -108,6 +108,8 @@ export async function POST(req: NextRequest) {
         ...(product.imageUrl ? { images: [product.imageUrl] } : {}),
       },
       unit_amount: Math.round(unitPrice * 100),
+      // Prices are pre-tax; Stripe Tax adds tax on top when enabled.
+      tax_behavior: 'exclusive' as const,
     },
     quantity,
   }))
@@ -159,6 +161,9 @@ export async function POST(req: NextRequest) {
       payment_method_types: ['card'],
       line_items: lineItems,
       ...(customerEmail ? { customer_email: customerEmail } : {}),
+      // Only turns on once Stripe Tax is activated in the dashboard and this env
+      // flag is set — otherwise Stripe would reject the session and break checkout.
+      ...(process.env.STRIPE_TAX_ENABLED === 'true' ? { automatic_tax: { enabled: true } } : {}),
       mode: 'payment',
       success_url: `${appUrl}/listings?purchase=success`,
       cancel_url: `${appUrl}/listings`,

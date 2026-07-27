@@ -42,10 +42,13 @@ export async function POST(req: NextRequest) {
               images: [`${appUrl}/logo.png`],
             },
             unit_amount: unitAmount,
+            tax_behavior: 'exclusive' as const,
           },
           quantity: 1,
         },
       ],
+      // Enabled only when Stripe Tax is activated and STRIPE_TAX_ENABLED=true.
+      ...(process.env.STRIPE_TAX_ENABLED === 'true' ? { automatic_tax: { enabled: true } } : {}),
       ...(user?.stripeCustomerId
         ? { customer: user.stripeCustomerId }
         : { customer_email: session.user.email }),
