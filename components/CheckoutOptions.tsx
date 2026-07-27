@@ -7,12 +7,14 @@ interface Props {
   quote: number
   paymentMethod: string | null
   taxRate?: number
+  taxExempt?: boolean
 }
 
 const money = (n: number) => `$${n.toFixed(2)}`
 
-export default function CheckoutOptions({ orderId, quote, paymentMethod, taxRate = 0 }: Props) {
-  const tax = Math.round(quote * taxRate * 100) / 100
+export default function CheckoutOptions({ orderId, quote, paymentMethod, taxRate = 0, taxExempt = false }: Props) {
+  const effectiveRate = taxExempt ? 0 : taxRate
+  const tax = Math.round(quote * effectiveRate * 100) / 100
   const checkTotal = quote + tax
   const [tab, setTab] = useState<'card' | 'check'>(paymentMethod === 'check' ? 'check' : 'card')
   const [checkChosen, setCheckChosen] = useState(paymentMethod === 'check')
@@ -57,6 +59,11 @@ export default function CheckoutOptions({ orderId, quote, paymentMethod, taxRate
       <div className="mb-4">
         <h2 className="text-sm font-semibold text-charcoal">Quote Ready — {money(quote)}</h2>
         <p className="text-warm-gray text-sm mt-0.5">Choose how you&apos;d like to pay to get your order started.</p>
+        {taxExempt && (
+          <p className="text-xs text-green-700 mt-1.5 inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5">
+            Tax exempt — no sales tax on this order
+          </p>
+        )}
       </div>
 
       {/* Method tabs */}
@@ -83,10 +90,10 @@ export default function CheckoutOptions({ orderId, quote, paymentMethod, taxRate
         <div>
           <p className="text-warm-gray text-sm mb-4">
             Pay the full {money(quote)} securely by card and we&apos;ll begin right away.
-            {taxRate > 0 && <span className="block mt-1">Sales tax is added at checkout based on your address.</span>}
+            {effectiveRate > 0 && <span className="block mt-1">Sales tax is added at checkout based on your address.</span>}
           </p>
           <button onClick={payByCard} disabled={loading !== null} className="btn-primary">
-            {loading === 'full' ? 'Redirecting…' : `Pay ${money(quote)}${taxRate > 0 ? ' + tax' : ''} by card`}
+            {loading === 'full' ? 'Redirecting…' : `Pay ${money(quote)}${effectiveRate > 0 ? ' + tax' : ''} by card`}
           </button>
         </div>
       ) : (
@@ -94,7 +101,7 @@ export default function CheckoutOptions({ orderId, quote, paymentMethod, taxRate
           {/* Full-payment-before-printing notice */}
           <div className="rounded-xl bg-taupe/15 border border-taupe/40 p-4 mb-4">
             <p className="text-sm text-charcoal font-medium mb-1">Full payment is required before we print.</p>
-            {taxRate > 0 && (
+            {effectiveRate > 0 && (
               <div className="text-sm text-warm-gray mb-2 space-y-0.5">
                 <div className="flex justify-between"><span>Subtotal</span><span className="text-charcoal">{money(quote)}</span></div>
                 <div className="flex justify-between"><span>NJ sales tax (6.625%)</span><span className="text-charcoal">{money(tax)}</span></div>

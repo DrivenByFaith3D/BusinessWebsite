@@ -50,8 +50,19 @@ export async function POST(req: NextRequest) {
           quantity: 1,
         },
       ],
-      // Enabled only when Stripe Tax is activated and STRIPE_TAX_ENABLED=true.
-      ...(process.env.STRIPE_TAX_ENABLED === 'true' ? { automatic_tax: { enabled: true } } : {}),
+      // Tax on only when Stripe Tax is active AND this order isn't tax-exempt
+      // (e.g. a church that provided an ST-5 certificate).
+      ...(process.env.STRIPE_TAX_ENABLED === 'true' && !order.taxExempt
+        ? {
+            automatic_tax: { enabled: true },
+            custom_text: {
+              submit: {
+                message:
+                  'Sales tax applies to New Jersey orders only. If your billing address is outside NJ, no tax is charged and you may be responsible for reporting use tax in your own state.',
+              },
+            },
+          }
+        : {}),
       ...(user?.stripeCustomerId
         ? { customer: user.stripeCustomerId }
         : { customer_email: session.user.email }),

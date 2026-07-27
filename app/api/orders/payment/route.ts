@@ -29,9 +29,18 @@ export async function POST(req: NextRequest) {
   // Remaining actions are admin-only
   if (!isAdmin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
+  if (action === 'mark_tax_exempt' || action === 'unmark_tax_exempt') {
+    const updated = await prisma.order.update({
+      where: { id: orderId },
+      data: { taxExempt: action === 'mark_tax_exempt' },
+    })
+    return NextResponse.json({ ok: true, order: updated })
+  }
+
   if (action === 'mark_paid') {
-    // Check payments aren't run through Stripe, so compute the NJ tax we collected.
-    const tax = taxEnabled() && order.quote != null ? njTax(order.quote) : null
+    // Check payments aren't run through Stripe, so compute the NJ tax we collected
+    // (skipped entirely for tax-exempt buyers with a certificate on file).
+    const tax = taxEnabled() && !order.taxExempt && order.quote != null ? njTax(order.quote) : null
     const updated = await prisma.order.update({
       where: { id: orderId },
       data: {

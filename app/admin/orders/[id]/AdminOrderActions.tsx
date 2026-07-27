@@ -20,6 +20,7 @@ export default function AdminOrderActions({
   quote: initialQuote,
   paymentStatus: initialPaymentStatus,
   paymentMethod: initialPaymentMethod,
+  taxExempt: initialTaxExempt,
   labelUrl,
 }: {
   orderId: string
@@ -29,6 +30,7 @@ export default function AdminOrderActions({
   quote: number | null
   paymentStatus: string | null
   paymentMethod: string | null
+  taxExempt: boolean
   labelUrl: string | null
 }) {
   const router = useRouter()
@@ -36,6 +38,7 @@ export default function AdminOrderActions({
   const [quote, setQuote] = useState<number | null>(initialQuote)
   const [paymentStatus, setPaymentStatus] = useState(initialPaymentStatus)
   const [paymentMethod] = useState(initialPaymentMethod)
+  const [taxExempt, setTaxExempt] = useState(initialTaxExempt)
   const [quoteInput, setQuoteInput] = useState(initialQuote ? String(initialQuote) : '')
   const [showQuoteInput, setShowQuoteInput] = useState(false)
   const [showShipModal, setShowShipModal] = useState(false)
@@ -52,6 +55,8 @@ export default function AdminOrderActions({
     if (!res.ok) return
     if (action === 'mark_paid') setPaymentStatus('paid')
     if (action === 'mark_unpaid') setPaymentStatus('unpaid')
+    if (action === 'mark_tax_exempt') setTaxExempt(true)
+    if (action === 'unmark_tax_exempt') setTaxExempt(false)
     router.refresh()
   }
 
@@ -159,6 +164,22 @@ export default function AdminOrderActions({
                   <p className="text-warm-gray">Full payment by check due before printing.</p>
                 )}
               </>
+            )}
+          </div>
+
+          {/* Tax exemption — for buyers with a valid certificate (e.g. a church ST-5) */}
+          <div className={`rounded-lg border px-3 py-2.5 mb-2 text-sm flex items-center justify-between gap-3 ${taxExempt ? 'border-green-300 bg-green-50' : 'border-taupe/40'}`}>
+            <span className={taxExempt ? 'text-green-800' : 'text-warm-gray'}>
+              {taxExempt ? 'Tax exempt — no sales tax charged' : 'Taxable order'}
+            </span>
+            {paymentStatus !== 'paid' && (
+              <button
+                onClick={() => paymentAction(taxExempt ? 'unmark_tax_exempt' : 'mark_tax_exempt')}
+                disabled={busy}
+                className="text-xs font-medium text-charcoal underline hover:no-underline disabled:opacity-40 shrink-0"
+              >
+                {taxExempt ? 'Make taxable' : 'Mark tax exempt'}
+              </button>
             )}
           </div>
 

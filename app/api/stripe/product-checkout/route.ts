@@ -166,7 +166,17 @@ export async function POST(req: NextRequest) {
       ...(customerEmail ? { customer_email: customerEmail } : {}),
       // Only turns on once Stripe Tax is activated in the dashboard and this env
       // flag is set — otherwise Stripe would reject the session and break checkout.
-      ...(process.env.STRIPE_TAX_ENABLED === 'true' ? { automatic_tax: { enabled: true } } : {}),
+      ...(process.env.STRIPE_TAX_ENABLED === 'true'
+        ? {
+            automatic_tax: { enabled: true },
+            custom_text: {
+              submit: {
+                message:
+                  'Sales tax applies to New Jersey orders only. If your billing address is outside NJ, no tax is charged and you may be responsible for reporting use tax in your own state.',
+              },
+            },
+          }
+        : {}),
       mode: 'payment',
       success_url: `${appUrl}/listings?purchase=success`,
       cancel_url: `${appUrl}/listings`,

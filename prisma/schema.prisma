@@ -54,6 +54,9 @@ model Order {
   // and when it was paid — used for the quarterly tax-to-remit total.
   taxCollected   Float?
   paidAt         DateTime?
+  // Admin marks this true after a tax-exempt buyer (e.g. a church with an NJ ST-5)
+  // provides their certificate — then no tax is charged on card or check.
+  taxExempt      Boolean  @default(false)
   createdAt      DateTime @default(now())
   archivedAt     DateTime?
   deletedAt      DateTime?

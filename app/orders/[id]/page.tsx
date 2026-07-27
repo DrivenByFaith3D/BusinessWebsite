@@ -129,6 +129,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           quote={order.quote}
           paymentMethod={order.paymentMethod}
           taxRate={taxEnabled() ? NJ_SALES_TAX_RATE : 0}
+          taxExempt={order.taxExempt}
         />
       )}
 
