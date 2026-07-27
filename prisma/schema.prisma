@@ -57,6 +57,10 @@ model Order {
   // Admin marks this true after a tax-exempt buyer (e.g. a church with an NJ ST-5)
   // provides their certificate — then no tax is charged on card or check.
   taxExempt      Boolean  @default(false)
+  // Optional invoice overrides the admin can edit: a clean line-item label and
+  // free-text notes/terms. Both fall back to sensible defaults when unset.
+  invoiceItemLabel String?
+  invoiceNotes     String?
   createdAt      DateTime @default(now())
   archivedAt     DateTime?
   deletedAt      DateTime?

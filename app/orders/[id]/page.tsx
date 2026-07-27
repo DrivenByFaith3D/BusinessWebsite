@@ -68,6 +68,17 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </p>
         </div>
         <div className="flex items-center gap-3 self-start sm:self-auto">
+          {order.quote != null && (
+            <Link
+              href={`/orders/${id}/invoice`}
+              className="flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-full border border-taupe/30 text-warm-gray hover:text-charcoal transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              Invoice
+            </Link>
+          )}
           {!isAdmin && order.status === 'delivered' && (
             <Link
               href={`/orders/new?type=${order.orderType ?? 'scratch'}&description=${encodeURIComponent(order.description.slice(0, 500))}`}

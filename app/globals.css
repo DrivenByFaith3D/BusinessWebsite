@@ -40,3 +40,19 @@
     @apply bg-white rounded-xl border border-taupe/50 shadow-sm;
   }
 }
+
+/* Printing: strip the app chrome so only the invoice prints. */
+@media print {
+  nav,
+  footer,
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff !important;
+  }
+  .print-area {
+    box-shadow: none !important;
+    border: none !important;
+  }
+}
