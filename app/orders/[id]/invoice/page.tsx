@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic'
 
 const SHOP = { name: 'DrivenByFaith3D', street: '82 Fieldstone Dr', cityLine: 'Springfield, NJ 07081', email: 'info@drivenbyfaith3d.com' }
 const money = (n: number) => `$${n.toFixed(2)}`
-const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { timeZone: 'America/New_York', year: 'numeric', month: 'long', day: 'numeric' })
 
 // Self-contained invoice styling so the printed sheet looks identical to the
 // screen and doesn't depend on the app theme (which browsers strip when printing).

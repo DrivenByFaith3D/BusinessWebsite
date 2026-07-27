@@ -1,3 +1,5 @@
+import { formatDateTime } from '@/lib/format'
+
 interface OrderEvent {
   id: string
   type: string
@@ -23,10 +25,7 @@ export default function OrderTimeline({ events }: { events: OrderEvent[] }) {
         {events.map((event, i) => {
           const style = EVENT_STYLES[event.type] ?? EVENT_STYLES.status_changed
           const isLast = i === events.length - 1
-          const time = new Date(event.createdAt).toLocaleString('en-US', {
-            month: 'short', day: 'numeric', year: 'numeric',
-            hour: 'numeric', minute: '2-digit',
-          })
+          const time = formatDateTime(event.createdAt)
           return (
             <div key={event.id} className="flex gap-3">
               <div className="flex flex-col items-center">

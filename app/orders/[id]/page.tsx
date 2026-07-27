@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { notFound, redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { taxEnabled, NJ_SALES_TAX_RATE, isNJ } from '@/lib/tax'
+import { formatDate, formatDateTime } from '@/lib/format'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import ChatWindow from '@/components/ChatWindow'
@@ -64,7 +65,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <p className="text-sm text-warm-gray">Order</p>
           <h1 className="text-2xl font-bold text-charcoal">{formatOrderId(order)}</h1>
           <p className="text-sm text-warm-gray mt-1">
-            Created {new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+            Created {formatDate(order.createdAt)}
           </p>
         </div>
         <div className="flex items-center gap-3 self-start sm:self-auto">
@@ -134,7 +135,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                   )}
                 </div>
                 <span className="text-zinc-600 text-xs">
-                  {new Date(q.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                  {formatDateTime(q.createdAt)}
                 </span>
               </div>
             ))}
