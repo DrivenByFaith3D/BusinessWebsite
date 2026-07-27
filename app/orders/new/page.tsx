@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import QuantityStepper from '@/components/QuantityStepper'
 
 const DRAFT_KEY = 'order_draft'
 const MAX_FILE_SIZE = 50 * 1024 * 1024 // 50MB
@@ -322,17 +323,7 @@ export default function NewOrderPage() {
           <div>
             <label className="block text-sm font-medium text-charcoal mb-1">Quantity</label>
             <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                className="w-9 h-9 rounded-full bg-white border border-taupe text-charcoal hover:bg-taupe/20 transition-colors flex items-center justify-center text-lg font-medium"
-              >−</button>
-              <span className="text-charcoal font-semibold text-lg w-8 text-center">{quantity}</span>
-              <button
-                type="button"
-                onClick={() => setQuantity(q => q + 1)}
-                className="w-9 h-9 rounded-full bg-white border border-taupe text-charcoal hover:bg-taupe/20 transition-colors flex items-center justify-center text-lg font-medium"
-              >+</button>
+              <QuantityStepper value={quantity} onChange={setQuantity} min={1} max={99} />
               {quantity > 1 && <span className="text-xs text-warm-gray">Ordering multiple of the same item</span>}
             </div>
           </div>
