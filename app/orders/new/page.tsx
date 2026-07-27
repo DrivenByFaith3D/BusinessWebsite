@@ -41,12 +41,32 @@ export default function NewOrderPage() {
   )
   const [description, setDescription] = useState('')
   const [baseProduct, setBaseProduct] = useState('')
+  const [baseProductId, setBaseProductId] = useState<string | null>(null)
+  const [products, setProducts] = useState<{ id: string; name: string; imageUrl: string | null }[]>([])
   const [quantity, setQuantity] = useState(1)
   const [file, setFile] = useState<File | null>(null)
   const [fileError, setFileError] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
+
+  // Load our catalogue so the customer can pick which print to customize.
+  useEffect(() => {
+    let alive = true
+    fetch('/api/products')
+      .then((r) => r.json())
+      .then((data) => {
+        if (alive && Array.isArray(data)) {
+          setProducts(
+            data
+              .map((p: { id: string; name: string; imageUrl: string | null }) => ({ id: p.id, name: p.name, imageUrl: p.imageUrl }))
+              .sort((a, b) => a.name.localeCompare(b.name)),
+          )
+        }
+      })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
 
   // Restore draft
   useEffect(() => {
@@ -77,11 +97,20 @@ export default function NewOrderPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!session) { router.push('/login'); return }
+    if (serviceType === 'customize' && !baseProduct.trim()) {
+      setError('Please choose which print you want to customize.')
+      return
+    }
     setError('')
     setLoading(true)
 
+    // Include the catalogue link when a listed print was chosen, so it's one click for us.
+    const baseLine =
+      baseProductId && baseProductId !== 'other'
+        ? `Base product: ${baseProduct} (/listings/${baseProductId})`
+        : `Base product: ${baseProduct}`
     const fullDescription = serviceType === 'customize'
-      ? `[Customize Our Prints, ${selectedService?.rate}]\nBase product: ${baseProduct}\n\n${description}`
+      ? `[Customize Our Prints, ${selectedService?.rate}]\n${baseLine}\n\n${description}`
       : `[Design & Print, ${selectedService?.rate}]\n\n${description}`
 
     const orderType = serviceType === 'customize' ? 'image' : 'scratch'
@@ -164,20 +193,58 @@ export default function NewOrderPage() {
       <div className="card p-6">
         <form onSubmit={handleSubmit} className="space-y-5">
 
-          {/* Base product field, only for Customize */}
+          {/* Which print to customize — a visual picker, only for Customize */}
           {serviceType === 'customize' && (
             <div>
-              <label className="block text-sm font-medium text-charcoal mb-1">
-                Which product do you want customized? <span className="text-warm-gray">*</span>
+              <label className="block text-sm font-medium text-charcoal mb-2">
+                Which print do you want to customize? <span className="text-warm-gray">*</span>
               </label>
-              <input
-                type="text"
-                value={baseProduct}
-                onChange={(e) => setBaseProduct(e.target.value)}
-                className="input"
-                placeholder="e.g. Minimal Desk Caddy, the large pen holder, etc."
-                required
-              />
+              {products.length > 0 && (
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-3">
+                  {products.map((p) => {
+                    const active = baseProductId === p.id
+                    return (
+                      <button
+                        type="button"
+                        key={p.id}
+                        onClick={() => { setBaseProductId(p.id); setBaseProduct(p.name) }}
+                        className={`text-left rounded-xl border p-2 transition-all ${
+                          active ? 'border-charcoal ring-2 ring-charcoal/15 bg-taupe/10' : 'border-taupe/40 hover:border-charcoal/50'
+                        }`}
+                      >
+                        <div className="aspect-square rounded-lg overflow-hidden bg-taupe/15 mb-2">
+                          {p.imageUrl && (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
+                          )}
+                        </div>
+                        <p className="text-xs text-charcoal leading-snug line-clamp-2">{p.name}</p>
+                      </button>
+                    )
+                  })}
+                  <button
+                    type="button"
+                    onClick={() => { setBaseProductId('other'); setBaseProduct('') }}
+                    className={`rounded-xl border p-2 flex flex-col items-center justify-center text-center transition-all min-h-[7rem] ${
+                      baseProductId === 'other' ? 'border-charcoal ring-2 ring-charcoal/15 bg-taupe/10' : 'border-taupe/40 hover:border-charcoal/50'
+                    }`}
+                  >
+                    <span className="text-2xl text-warm-gray">+</span>
+                    <span className="text-xs text-charcoal mt-1">Something else</span>
+                  </button>
+                </div>
+              )}
+              {/* Free-text fallback: no catalogue loaded, or "Something else" chosen. */}
+              {(products.length === 0 || baseProductId === 'other') && (
+                <input
+                  type="text"
+                  value={baseProduct}
+                  onChange={(e) => setBaseProduct(e.target.value)}
+                  className="input"
+                  placeholder="Describe the print you want customized"
+                  required
+                />
+              )}
             </div>
           )}
 

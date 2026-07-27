@@ -5,6 +5,7 @@ import { useState, useEffect, useCallback } from 'react'
 import StarRating from '@/components/StarRating'
 import { useCart, MAX_QTY } from '@/components/CartProvider'
 import BackInStockForm from '@/components/BackInStockForm'
+import QuantityStepper from '@/components/QuantityStepper'
 
 interface Product {
   id: string
@@ -305,37 +306,12 @@ export default function ProductDetailClient({
         {!soldOut && (
           <div className="flex items-center gap-3 mt-6">
             <span className="text-sm font-medium text-charcoal">Quantity</span>
-            <div className="flex items-center border border-taupe/50 rounded-full overflow-hidden">
-              <button
-                onClick={() => setQty((q) => Math.max(1, q - 1))}
-                disabled={qty <= 1}
-                aria-label="Decrease quantity"
-                className="w-9 h-9 flex items-center justify-center text-charcoal hover:bg-taupe/20 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-              >
-                −
-              </button>
-              <input
-                type="number"
-                min={1}
-                max={stockLimit}
-                value={qty}
-                onChange={(e) => {
-                  const n = Math.floor(Number(e.target.value))
-                  if (!Number.isFinite(n)) return
-                  setQty(Math.min(stockLimit, Math.max(1, n)))
-                }}
-                aria-label="Quantity"
-                className="w-12 text-center text-sm font-medium text-charcoal bg-transparent border-0 focus:outline-none [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-              />
-              <button
-                onClick={() => setQty((q) => Math.min(stockLimit, q + 1))}
-                disabled={qty >= stockLimit}
-                aria-label="Increase quantity"
-                className="w-9 h-9 flex items-center justify-center text-charcoal hover:bg-taupe/20 disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-              >
-                +
-              </button>
-            </div>
+            <QuantityStepper
+              value={qty}
+              onChange={setQty}
+              min={1}
+              max={Number.isFinite(stockLimit) ? stockLimit : MAX_QTY}
+            />
             {qty > 1 && (
               <span className="text-sm text-warm-gray">${(price * qty).toFixed(2)} total</span>
             )}

@@ -3,7 +3,8 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
-import { useCart } from './CartProvider'
+import { useCart, MAX_QTY } from './CartProvider'
+import QuantityStepper from './QuantityStepper'
 
 export default function CartDrawer() {
   const [open, setOpen] = useState(false)
@@ -127,23 +128,13 @@ export default function CartDrawer() {
                         )}
                         <p className="text-xs text-warm-gray mt-1">${item.price.toFixed(2)} each</p>
                         <div className="flex items-center justify-between gap-2 mt-2">
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => updateQuantity(item.key, item.quantity - 1)}
-                              aria-label="Decrease quantity"
-                              className="w-6 h-6 rounded-full border border-taupe text-charcoal flex items-center justify-center text-xs hover:bg-taupe/20 transition-colors"
-                            >
-                              −
-                            </button>
-                            <span className="text-sm font-medium w-5 text-center">{item.quantity}</span>
-                            <button
-                              onClick={() => updateQuantity(item.key, item.quantity + 1)}
-                              aria-label="Increase quantity"
-                              className="w-6 h-6 rounded-full border border-taupe text-charcoal flex items-center justify-center text-xs hover:bg-taupe/20 transition-colors"
-                            >
-                              +
-                            </button>
-                          </div>
+                          <QuantityStepper
+                            value={item.quantity}
+                            onChange={(n) => updateQuantity(item.key, n)}
+                            min={1}
+                            max={MAX_QTY}
+                            size="sm"
+                          />
                           <span className="text-sm font-semibold text-charcoal shrink-0">
                             ${(item.price * item.quantity).toFixed(2)}
                           </span>
