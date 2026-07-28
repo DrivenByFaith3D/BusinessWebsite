@@ -84,7 +84,12 @@ export default async function AdminOrderDetailPage({ params }: { params: Promise
 
           {/* Description */}
           <div className="card p-5 mb-6">
-            <h2 className="text-xs font-semibold text-warm-gray uppercase tracking-wide mb-2">Description</h2>
+            <div className="flex items-start justify-between gap-3 mb-2">
+              <h2 className="text-xs font-semibold text-warm-gray uppercase tracking-wide">Description</h2>
+              <span className="text-xs font-medium text-charcoal bg-taupe/20 px-2.5 py-1 rounded-full shrink-0">
+                Qty: {order.quantity}
+              </span>
+            </div>
             <p className="text-sm text-charcoal/85 whitespace-pre-wrap leading-relaxed">{order.description}</p>
             {order.orderType && (
               <p className="text-xs text-warm-gray/60 mt-2">
