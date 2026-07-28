@@ -15,6 +15,7 @@ interface Order {
   orderNumber?: string | null
   status: string
   description: string
+  quantity?: number
   createdAt: Date
   archivedAt?: Date | null
   deletedAt?: Date | null
@@ -336,6 +337,7 @@ function OrderRow({ order, tab, unread, selected, onToggle, onAction }: { order:
           </div>
         </td>
         <td className="px-5 py-4 text-warm-gray">{order.userEmail}</td>
+        <td className="px-5 py-4 text-center text-charcoal/80 font-medium">{order.quantity ?? 1}</td>
         <td className="px-5 py-4">
           <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${STATUS_STYLES[status] ?? 'bg-taupe/20 text-warm-gray'}`}>
             {STATUS_LABELS[status] ?? status}
@@ -699,6 +701,7 @@ export default function AdminOrdersTable({ initialOrders, unreadMap = {} }: { in
               </th>
               <th className="px-3 py-3 text-left">Order ID</th>
               <th className="px-5 py-3 text-left">Customer</th>
+              <th className="px-5 py-3 text-center">Qty</th>
               <th className="px-5 py-3 text-left">Status</th>
               <th className="px-5 py-3 text-left">Created</th>
               <th className="px-5 py-3 text-left">Actions</th>
@@ -718,7 +721,7 @@ export default function AdminOrdersTable({ initialOrders, unreadMap = {} }: { in
             ))}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-5 py-10 text-center text-warm-gray">
+                <td colSpan={7} className="px-5 py-10 text-center text-warm-gray">
                   {tab === 'active' ? 'No active orders' : tab === 'delivered' ? 'No delivered orders' : tab === 'archived' ? 'No archived orders' : 'Trash is empty'}
                 </td>
               </tr>
