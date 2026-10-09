@@ -1,3 +1,4 @@
+import AdminActionCenter from '@/components/AdminActionCenter'
 import Link from 'next/link'
 import Image from 'next/image'
 import { getServerSession } from 'next-auth'
@@ -10,10 +11,6 @@ export default async function HomePage() {
   const isAdmin = session?.user?.role === 'admin'
 
   if (isAdmin) {
-    // Purge expired trash
-    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    await prisma.order.deleteMany({ where: { deletedAt: { not: null, lte: cutoff } } })
-
     const startOfMonth = new Date()
     startOfMonth.setDate(1)
     startOfMonth.setHours(0, 0, 0, 0)
@@ -78,6 +75,7 @@ export default async function HomePage() {
 
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <AdminActionCenter userId={session.user.id} />
         <div className="mb-8">
           <h1 className="text-2xl font-bold">Welcome back</h1>
           <p className="text-warm-gray text-sm mt-1">Here&apos;s what&apos;s happening with your shop.</p>
@@ -227,11 +225,11 @@ export default async function HomePage() {
               We specialize in high-quality 3D printed desk organizers. Every print is crafted with care, priced per print hour, so you only pay for exactly what&apos;s made.
             </p>
             <div className="flex flex-wrap justify-center gap-4">
-              <Link href="/services-store" className="btn-primary px-8 py-3 text-base">
-                View Services
+              <Link href="/orders/new" className="btn-primary px-8 py-3 text-base">
+                Request a Custom Print
               </Link>
               <Link href="/listings" className="btn-secondary px-8 py-3 text-base bg-cream/70 border-charcoal/50 hover:bg-cream">
-                Our Shop
+                Shop Products
               </Link>
             </div>
           </div>

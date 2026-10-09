@@ -37,7 +37,7 @@ export default async function PublicTrackingPage({ params }: { params: Promise<{
     return (
       <div className="min-h-[70vh] flex items-center justify-center px-4">
         <div className="card p-8 w-full max-w-md text-center">
-          <p className="text-zinc-400 mb-4">Order not found.</p>
+          <p className="text-warm-gray mb-4">Order not found.</p>
           <p className="text-xs text-zinc-600">Check the order number and try again.</p>
           <Link href="/" className="btn-secondary mt-6 inline-block">Go Home</Link>
         </div>
@@ -57,9 +57,9 @@ export default async function PublicTrackingPage({ params }: { params: Promise<{
         <Link href="/" className="inline-block mb-6">
           <Image src="/logo.png" alt="DrivenByFaith3D" width={56} height={56} className="mx-auto object-contain" />
         </Link>
-        <p className="text-xs font-semibold tracking-widest text-zinc-500 uppercase mb-1">Order Tracking</p>
-        <h1 className="text-3xl font-bold text-white">{order.orderNumber}</h1>
-        <p className="text-zinc-500 text-sm mt-2">
+        <p className="text-xs font-semibold tracking-widest text-warm-gray uppercase mb-1">Order Tracking</p>
+        <h1 className="text-3xl font-bold text-charcoal">{order.orderNumber}</h1>
+        <p className="text-warm-gray text-sm mt-2">
           Placed {new Date(order.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
         </p>
       </div>
@@ -87,7 +87,7 @@ export default async function PublicTrackingPage({ params }: { params: Promise<{
                   <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center mb-2 transition-colors ${
                     done
                       ? 'bg-white border-white'
-                      : 'bg-zinc-900 border-zinc-700'
+                      : 'bg-white border-zinc-700'
                   }`}>
                     {done ? (
                       <svg className="w-4 h-4 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -98,7 +98,7 @@ export default async function PublicTrackingPage({ params }: { params: Promise<{
                     )}
                   </div>
                   <span className={`text-[10px] text-center leading-tight font-medium ${
-                    active ? 'text-white' : done ? 'text-zinc-400' : 'text-zinc-600'
+                    active ? 'text-charcoal' : done ? 'text-warm-gray' : 'text-zinc-600'
                   }`}>
                     {step.label}
                   </span>
@@ -112,21 +112,21 @@ export default async function PublicTrackingPage({ params }: { params: Promise<{
       {/* Tracking info */}
       {order.trackingNumber && (
         <div className="card p-5 mb-6">
-          <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-wide mb-3">Shipping Info</h2>
+          <h2 className="text-xs font-semibold text-warm-gray uppercase tracking-wide mb-3">Shipping Info</h2>
           <div className="space-y-2 text-sm">
             {order.carrier && (
               <div className="flex gap-3">
-                <span className="text-zinc-500 w-28">Carrier</span>
+                <span className="text-warm-gray w-28">Carrier</span>
                 <span className="text-zinc-200 capitalize">{order.carrier}</span>
               </div>
             )}
             <div className="flex gap-3">
-              <span className="text-zinc-500 w-28">Tracking #</span>
+              <span className="text-warm-gray w-28">Tracking #</span>
               <span className="text-zinc-200 font-mono">{order.trackingNumber}</span>
             </div>
             {order.trackingUrl && (
               <a href={order.trackingUrl} target="_blank" rel="noopener noreferrer"
-                className="inline-block mt-2 text-sm text-white font-medium hover:underline">
+                className="inline-block mt-2 text-sm text-charcoal font-medium hover:underline">
                 Track on carrier site →
               </a>
             )}
@@ -136,7 +136,7 @@ export default async function PublicTrackingPage({ params }: { params: Promise<{
 
       <p className="text-center text-xs text-zinc-600">
         For order details and messages,{' '}
-        <Link href="/login" className="text-zinc-400 hover:text-white underline transition-colors">sign in to your account</Link>.
+        <Link href="/login" className="text-warm-gray hover:text-charcoal underline transition-colors">sign in to your account</Link>.
       </p>
     </div>
   )

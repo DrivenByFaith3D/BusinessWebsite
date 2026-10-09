@@ -184,6 +184,8 @@ model Product {
   price       Float
   imageUrl    String?
   inStock     Boolean  @default(true)
+  websiteSold Int      @default(0)
+  quantity    Int? // null means made-to-order/unlimited; Etsy supplies a count
   createdAt   DateTime @default(now())
 
   // Set only on products pulled from Etsy. Products created by hand keep this
@@ -256,6 +258,7 @@ model ProductVariation {
   sku           String?
   price         Float?
   quantity      Int     @default(0)
+  websiteSold   Int     @default(0)
   isEnabled     Boolean @default(true)
   label         String  // flattened for display, e.g. "Army Blue"
   options       Json    @default("[]")
@@ -329,11 +332,23 @@ model ShopOrder {
   stripeSessionId String?   @unique
   createdAt       DateTime  @default(now())
   paidAt          DateTime?
+  confirmationToken   String?   @unique
+  checkoutKey         String?   @unique
+  checkoutFingerprint String?
+  expiresAt           DateTime?
+  shippingAddress     Json?
+  amountPaid          Float?
+  shippingCharged     Float?
+  trackingNumber      String?
+  carrier             String?
+  trackingUrl         String?
+  shippedAt           DateTime?
 
   items ShopOrderItem[]
 
   @@index([userId, createdAt])
   @@index([email])
+  @@index([status, expiresAt])
 }
 
 // Name and price are snapshots taken at purchase time: the product may later be
@@ -347,10 +362,15 @@ model ShopOrderItem {
   // Which variation was bought, e.g. "Army Blue". Snapshotted like name/price so
   // the order always records what was actually ordered.
   variation   String?
+  variationId     String?
+  inventoryKey    String?
+  personalization String?
+  cartKey         String?
   price       Float
   quantity    Int
 
   @@index([shopOrderId])
+  @@index([productId, inventoryKey])
 }
 
 // An Etsy order (receipt), mirrored so it can be fulfilled and shipped from this
@@ -491,4 +511,19 @@ model BackInStockSubscription {
 
   @@unique([productId, email])
   @@index([productId, notifiedAt])
+}
+
+// A durable Stripe delivery marker, written in the same transaction as payment.
+model StripeEvent {
+  id        String   @id
+  createdAt DateTime @default(now())
+}
+
+model IntegrationSync {
+  key           String    @id
+  status        String
+  lastAttemptAt DateTime
+  lastSuccessAt DateTime?
+  message       String?
+  updatedAt     DateTime  @updatedAt
 }

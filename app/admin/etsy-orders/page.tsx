@@ -7,7 +7,8 @@ import EtsyOrdersClient from './EtsyOrdersClient'
 
 export const dynamic = 'force-dynamic'
 
-export default async function AdminEtsyOrdersPage() {
+export default async function AdminEtsyOrdersPage({ searchParams }: { searchParams: Promise<{ receipt?: string }> }) {
+  const { receipt } = await searchParams
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'admin') redirect('/')
 
@@ -30,7 +31,8 @@ export default async function AdminEtsyOrdersPage() {
 
       <EtsyOrdersClient
         connected={!!connection}
-        initialOrders={orders.map((o) => ({
+        focusReceipt={receipt}
+      initialOrders={orders.map((o) => ({
           id: o.id,
           receiptId: o.receiptId,
           buyerName: o.buyerName,

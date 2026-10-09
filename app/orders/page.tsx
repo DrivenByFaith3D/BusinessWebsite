@@ -52,7 +52,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
     // checkouts and are deliberately hidden.
     prisma.shopOrder.findMany({
       where: {
-        status: { not: 'pending' },
+        status: { in: ['paid', 'printing', 'shipped', 'delivered'] },
         OR: [
           { userId: session.user.id },
           ...(session.user.email ? [{ email: session.user.email }] : []),
@@ -99,7 +99,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           <h1 className="text-2xl font-bold text-charcoal">My Orders</h1>
           <p className="text-warm-gray text-sm mt-1">Your custom print orders and shop purchases</p>
         </div>
-        <Link href="/orders/new" className="btn-primary whitespace-nowrap">+ New Order</Link>
+        <Link href="/orders/new" className="btn-primary whitespace-nowrap">Request a Custom Print</Link>
       </div>
 
       {/* ---------- Custom orders ---------- */}
@@ -144,7 +144,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
             {search ? (
               <Link href="/orders" className="text-sm text-warm-gray hover:text-charcoal underline mt-3 inline-block transition-colors">Clear search</Link>
             ) : (
-              <Link href="/orders/new" className="btn-primary mt-4 inline-block">Create Order</Link>
+              <Link href="/orders/new" className="btn-primary mt-4 inline-block">Request a Custom Print</Link>
             )}
           </div>
         ) : (
@@ -230,7 +230,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
           <div className="card p-10 text-center">
             <p className="font-medium text-charcoal text-sm">No shop orders yet</p>
             <p className="text-sm mt-1 text-warm-gray">Anything you buy from the shop will appear here.</p>
-            <Link href="/listings" className="btn-secondary mt-4 inline-block">Browse Shop</Link>
+            <Link href="/listings" className="btn-secondary mt-4 inline-block">Shop Products</Link>
           </div>
         ) : (
           <div className="space-y-3">
@@ -241,7 +241,7 @@ export default async function OrdersPage({ searchParams }: { searchParams: Promi
                   <div className="flex items-start justify-between gap-4">
                     <div className="min-w-0">
                       <p className="font-medium text-charcoal text-sm">
-                        Order {order.orderNumber ?? `#${order.id.slice(0, 8).toUpperCase()}`}
+                        {order.confirmationToken ? <Link href={`/purchases/${order.confirmationToken}`} className="underline">Order {order.orderNumber ?? `#${order.id.slice(0, 8).toUpperCase()}`} · Receipt & tracking</Link> : <>Order {order.orderNumber ?? `#${order.id.slice(0, 8).toUpperCase()}`}</>}
                       </p>
                       <p className="text-xs text-warm-gray/60 mt-1">
                         {fmtDate(order.createdAt)} · {itemCount} item{itemCount !== 1 ? 's' : ''}

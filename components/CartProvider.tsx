@@ -1,5 +1,6 @@
 'use client'
 
+import { cartLineKey, remainingCart } from '@/lib/checkout-lines'
 import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 
 export interface CartItem {
@@ -8,6 +9,7 @@ export interface CartItem {
   key: string
   productId: string
   variationId: string | null
+  personalization?: string | null
   variationLabel: string | null
   name: string
   price: number
@@ -21,6 +23,7 @@ export interface AddItemInput {
   price: number
   imageUrl: string | null
   variationId?: string | null
+  personalization?: string | null
   variationLabel?: string | null
   quantity?: number
 }
@@ -34,6 +37,7 @@ interface CartContextType {
   removeItem: (key: string) => void
   updateQuantity: (key: string, quantity: number) => void
   clearCart: () => void
+  finishPurchase: (sessionId: string, purchased: { cartKey: string | null; quantity: number }[]) => void
   totalItems: number
   totalPrice: number
 }
@@ -41,8 +45,6 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | null>(null)
 
 const CART_KEY = 'dbf3d_cart'
-
-const lineKey = (productId: string, variationId?: string | null) => `${productId}::${variationId ?? ''}`
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
@@ -65,56 +67,90 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
   // Persist cart to localStorage
   useEffect(() => {
     if (loaded) {
-      localStorage.setItem(CART_KEY, JSON.stringify(items))
+      try {
+        localStorage.setItem(CART_KEY, JSON.stringify(items))
+      } catch {}
     }
   }, [items, loaded])
 
   const addItem = useCallback((product: AddItemInput) => {
-    const key = lineKey(product.productId, product.variationId)
+    const key = cartLineKey(product.productId, product.variationId, product.personalization)
     const adding = Math.max(1, Math.floor(product.quantity ?? 1))
-    setItems(prev => {
-      const existing = prev.find(item => item.key === key)
+    setItems((prev) => {
+      const existing = prev.find((item) => item.key === key)
       if (existing) {
-        return prev.map(item =>
-          item.key === key
-            ? { ...item, quantity: Math.min(MAX_QTY, item.quantity + adding) }
-            : item
+        return prev.map((item) =>
+          item.key === key ? { ...item, quantity: Math.min(MAX_QTY, item.quantity + adding) } : item,
         )
       }
-      return [...prev, {
-        key,
-        productId: product.productId,
-        variationId: product.variationId ?? null,
-        variationLabel: product.variationLabel ?? null,
-        name: product.name,
-        price: product.price,
-        imageUrl: product.imageUrl,
-        quantity: Math.min(MAX_QTY, adding),
-      }]
+      return [
+        ...prev,
+        {
+          key,
+          productId: product.productId,
+          variationId: product.variationId ?? null,
+          personalization: product.personalization?.trim() || null,
+          variationLabel: product.variationLabel ?? null,
+          name: product.name,
+          price: product.price,
+          imageUrl: product.imageUrl,
+          quantity: Math.min(MAX_QTY, adding),
+        },
+      ]
     })
   }, [])
 
   const removeItem = useCallback((key: string) => {
-    setItems(prev => prev.filter(item => item.key !== key))
+    setItems((prev) => prev.filter((item) => item.key !== key))
   }, [])
 
   const updateQuantity = useCallback((key: string, quantity: number) => {
     if (quantity <= 0) {
-      setItems(prev => prev.filter(item => item.key !== key))
+      setItems((prev) => prev.filter((item) => item.key !== key))
     } else {
-      setItems(prev => prev.map(item =>
-        item.key === key ? { ...item, quantity: Math.min(MAX_QTY, Math.floor(quantity)) } : item
-      ))
+      setItems((prev) =>
+        prev.map((item) =>
+          item.key === key ? { ...item, quantity: Math.min(MAX_QTY, Math.floor(quantity)) } : item,
+        ),
+      )
     }
   }, [])
 
   const clearCart = useCallback(() => setItems([]), [])
 
+  const finishPurchase = useCallback(
+    (sessionId: string, purchased: { cartKey: string | null; quantity: number }[]) => {
+      if (!loaded) return
+      const marker = `dbf3d_paid_${sessionId}`
+      try {
+        if (localStorage.getItem(marker)) return
+        // Update storage and mark completion together before React's persistence effect.
+        const saved = JSON.parse(localStorage.getItem(CART_KEY) || '[]')
+        const next = remainingCart(Array.isArray(saved) ? saved : [], purchased)
+        localStorage.setItem(CART_KEY, JSON.stringify(next))
+        localStorage.setItem(marker, '1')
+        setItems(next)
+      } catch {} // Storage unavailable: retain the cart rather than remove unrelated items.
+    },
+    [loaded],
+  )
+
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0)
   const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0)
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQuantity, clearCart, totalItems, totalPrice }}>
+    <CartContext.Provider
+      value={{
+        items,
+        addItem,
+        removeItem,
+        updateQuantity,
+        clearCart,
+        finishPurchase,
+        totalItems,
+        totalPrice,
+      }}
+    >
       {children}
     </CartContext.Provider>
   )

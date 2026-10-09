@@ -1,116 +1,54 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
-import { prisma } from '@/lib/prisma'
-import { sendEmail, productPurchaseAdminEmailHtml, productPurchaseBuyerEmailHtml } from '@/lib/brevo'
-import { logOrderEvent } from '@/lib/events'
-import { adminNotifyEmails } from '@/lib/notify'
-
-function getStripe() {
-  if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not set')
-  return new Stripe(process.env.STRIPE_SECRET_KEY.trim())
-}
+import { applyCheckoutSession, notifyShopPurchase } from '@/lib/shop-payments'
+import { paymentHealth } from '@/lib/integration-health'
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
-  const sig = req.headers.get('stripe-signature')
-
-  if (!process.env.STRIPE_WEBHOOK_SECRET) {
-    console.error('STRIPE_WEBHOOK_SECRET is not configured')
+  const signature = req.headers.get('stripe-signature')
+  if (!process.env.STRIPE_WEBHOOK_SECRET || !process.env.STRIPE_SECRET_KEY)
     return NextResponse.json({ error: 'Webhook not configured' }, { status: 500 })
-  }
-  if (!sig) {
-    return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 })
-  }
-
-  const stripe = getStripe()
+  if (!signature) return NextResponse.json({ error: 'Missing stripe-signature header' }, { status: 400 })
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY.trim())
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(body, sig, process.env.STRIPE_WEBHOOK_SECRET)
+    event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET.trim())
   } catch {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })
   }
-
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session
-    const { orderId, shopOrderId, productName } = session.metadata ?? {}
-
-    // Sales tax Stripe collected on this session (cents -> dollars), if any.
-    const taxCollected = session.total_details?.amount_tax != null
-      ? Math.round(session.total_details.amount_tax) / 100
-      : null
-
-    if (orderId && session.payment_status === 'paid') {
-      // Full custom order payment (paid in full by card)
-      const order = await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          paymentStatus: 'paid',
-          paymentMethod: 'card',
-          status: 'in_progress',
-          paidAt: new Date(),
-          ...(taxCollected != null ? { taxCollected } : {}),
-        },
-        select: { userId: true },
-      })
-      await logOrderEvent(orderId, 'payment_received', 'Payment received')
-      // Save Stripe customer ID for portal access
-      if (session.customer && typeof session.customer === 'string') {
-        await prisma.user.update({
-          where: { id: order.userId },
-          data: { stripeCustomerId: session.customer },
-        }).catch(() => {}) // ignore unique constraint if already set
-      }
-    } else if (shopOrderId && session.payment_status === 'paid') {
-      const buyerEmail = session.customer_email ?? session.customer_details?.email ?? null
-
-      // Mark the recorded purchase paid. Guests have no userId, so their email is
-      // the only identifier we get, and it only arrives here from Stripe.
-      await prisma.shopOrder.update({
-        where: { id: shopOrderId },
-        data: {
-          status: 'paid',
-          paidAt: new Date(),
-          ...(taxCollected != null ? { taxCollected } : {}),
-          ...(buyerEmail ? { email: buyerEmail } : {}),
-        },
-      }).catch((e) => console.error('Shop order update failed:', e))
-
-      // Product listing purchase, email admin
-      try {
-        const appUrl = (process.env.NEXTAUTH_URL || 'http://localhost:3000').trim()
-        const amount = (session.amount_total ?? 0) / 100
-        for (const to of await adminNotifyEmails()) {
-          await sendEmail({
-            to,
-            subject: `New product purchase: ${productName ?? 'Product'}`,
-            htmlContent: productPurchaseAdminEmailHtml(productName ?? 'Product', amount, buyerEmail ?? 'Unknown', appUrl),
-          })
+  if (
+    [
+      'checkout.session.completed',
+      'checkout.session.async_payment_succeeded',
+      'checkout.session.expired',
+      'checkout.session.async_payment_failed',
+    ].includes(event.type)
+  ) {
+    try {
+      const changed = await applyCheckoutSession(
+        event.data.object as Stripe.Checkout.Session,
+        event.id,
+        event.type === 'checkout.session.async_payment_failed',
+      )
+      await paymentHealth('ok')
+      if (changed) {
+        try {
+          await notifyShopPurchase(changed)
+        } catch {
+          await paymentHealth(
+            'failed',
+            'Payment is recorded, but a receipt email failed. Open the order inbox to follow up.',
+          )
         }
-        // Email the buyer
-        if (buyerEmail) {
-          await sendEmail({
-            to: buyerEmail,
-            subject: `Order confirmed: ${productName ?? 'Your order'}`,
-            htmlContent: productPurchaseBuyerEmailHtml(productName ?? 'Your order', amount, appUrl),
-          })
-        }
-      } catch (e) {
-        console.error('Product purchase email failed:', e)
       }
+    } catch {
+      console.error('Stripe payment processing failed; delivery will be retried')
+      await paymentHealth(
+        'failed',
+        'Stripe payment processing failed. Stripe will retry; check the order inbox.',
+      ).catch(() => {})
+      return NextResponse.json({ error: 'Payment processing failed; retry delivery' }, { status: 500 })
     }
   }
-
-  if (event.type === 'checkout.session.expired') {
-    const session = event.data.object as Stripe.Checkout.Session
-    const orderId = session.metadata?.orderId
-    if (orderId) {
-      // Clear the stripe session so the customer can retry
-      await prisma.order.update({
-        where: { id: orderId },
-        data: { stripeSessionId: null },
-      }).catch(() => {})
-    }
-  }
-
   return NextResponse.json({ received: true })
 }

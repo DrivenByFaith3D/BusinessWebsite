@@ -39,12 +39,13 @@ function database(failInsert = false) {
   const db = { async $transaction(callback: (tx: unknown) => Promise<unknown>) {
     const draft = structuredClone(state)
     const tx = {
-      product: { async update({ data }: { data: { imageUrl?: string } }) { draft.thumbnail = data.imageUrl ?? draft.thumbnail; return { id: 'product-1' } } },
+      product: { async findUnique() { return { websiteSold: 0 } }, async update({ data }: { data: { imageUrl?: string } }) { draft.thumbnail = data.imageUrl ?? draft.thumbnail; return { id: 'product-1' } } },
       productImage: {
         async deleteMany() { draft.images = [] },
         async createMany({ data }: { data: { url: string }[] }) { if (failInsert) throw new Error('image insertion failed'); draft.images = data.map(i => i.url) },
       },
       productVariation: {
+        async findMany() { return [] },
         async deleteMany() { draft.variations = [] },
         async createMany({ data }: { data: { label: string }[] }) { draft.variations = data.map(v => v.label) },
       },

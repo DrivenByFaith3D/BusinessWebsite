@@ -1,25 +1,35 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import Image from 'next/image'
 import { useCart, MAX_QTY } from './CartProvider'
 import QuantityStepper from './QuantityStepper'
 
 export default function CartDrawer() {
+  const drawerRef = useRef<HTMLDivElement>(null)
   const [open, setOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [checkingOut, setCheckingOut] = useState(false)
   const [error, setError] = useState('')
-  const { items, removeItem, updateQuantity, clearCart, totalItems, totalPrice } = useCart()
+  const { items, removeItem, updateQuantity, totalItems, totalPrice } = useCart()
 
   useEffect(() => { setMounted(true) }, [])
 
   // Close on Escape, and stop the page scrolling behind the drawer.
   useEffect(() => {
     if (!open) return
+    const previousFocus = document.activeElement as HTMLElement | null
+    const dialog = drawerRef.current
+    const focusables = () => Array.from(dialog?.querySelectorAll<HTMLElement>('button:not(:disabled), a[href], input, textarea, select, [tabindex="0"]') ?? [])
+    focusables()[0]?.focus()
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false)
+      if (e.key === 'Tab') {
+        const nodes = focusables(), first = nodes[0], last = nodes[nodes.length - 1]
+        if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last?.focus() }
+        else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first?.focus() }
+      }
     }
     document.addEventListener('keydown', onKey)
     const prevOverflow = document.body.style.overflow
@@ -27,6 +37,7 @@ export default function CartDrawer() {
     return () => {
       document.removeEventListener('keydown', onKey)
       document.body.style.overflow = prevOverflow
+      previousFocus?.focus()
     }
   }, [open])
 
@@ -35,20 +46,28 @@ export default function CartDrawer() {
     setCheckingOut(true)
     setError('')
     try {
+      const fingerprint = JSON.stringify(items.map(item => ({ productId: item.productId, variationId: item.variationId, personalization: item.personalization ?? null, quantity: item.quantity })))
+      let checkoutKey = crypto.randomUUID()
+      try {
+        const saved = JSON.parse(localStorage.getItem('dbf3d_checkout') || 'null')
+        if (saved?.fingerprint === fingerprint && Date.now() - saved.createdAt < 30 * 60 * 1000) checkoutKey = saved.key
+        else localStorage.setItem('dbf3d_checkout', JSON.stringify({ key: checkoutKey, fingerprint, createdAt: Date.now() }))
+      } catch {}
       const res = await fetch('/api/stripe/product-checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          cartItems: items.map(item => ({ productId: item.productId, variationId: item.variationId, quantity: item.quantity })),
+          checkoutKey,
+          cartItems: items.map(item => ({ productId: item.productId, variationId: item.variationId, personalization: item.personalization ?? null, quantity: item.quantity })),
         }),
       })
       const data = await res.json()
       if (!res.ok || !data.url) {
+        if (res.status === 409) { try { localStorage.removeItem('dbf3d_checkout') } catch {} }
         setError(data.error || 'Could not start checkout. Please try again.')
         setCheckingOut(false)
         return
       }
-      clearCart()
       window.location.href = data.url
     } catch {
       setError('Network error. Please try again.')
@@ -82,6 +101,7 @@ export default function CartDrawer() {
           <div className="absolute inset-0 bg-black/30" onClick={() => setOpen(false)} />
           <div
             className="absolute right-0 top-0 h-full w-full max-w-md bg-cream border-l border-taupe/30 shadow-xl flex flex-col"
+            ref={drawerRef}
             role="dialog"
             aria-modal="true"
             aria-label="Your cart"
@@ -89,7 +109,7 @@ export default function CartDrawer() {
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-taupe/30 shrink-0">
               <h2 className="text-lg font-display">Your Cart</h2>
-              <button onClick={() => setOpen(false)} className="text-warm-gray hover:text-charcoal transition-colors">
+              <button aria-label="Close cart" onClick={() => setOpen(false)} className="text-warm-gray hover:text-charcoal transition-colors">
                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
                 </svg>
@@ -126,6 +146,7 @@ export default function CartDrawer() {
                         {item.variationLabel && (
                           <p className="text-xs text-warm-gray mt-1">{item.variationLabel}</p>
                         )}
+                        {item.personalization && <p className="text-xs text-charcoal mt-1 break-words">Personalization: {item.personalization}</p>}
                         <p className="text-xs text-warm-gray mt-1">${item.price.toFixed(2)} each</p>
                         <div className="flex items-center justify-between gap-2 mt-2">
                           <QuantityStepper
@@ -162,6 +183,7 @@ export default function CartDrawer() {
                   <span className="text-sm text-charcoal/90">Subtotal</span>
                   <span className="text-lg font-display">${totalPrice.toFixed(2)}</span>
                 </div>
+                <p className="text-xs text-warm-gray">No shipping charge is added for website purchases. Any applicable tax appears before payment. Your cart stays saved until payment is confirmed.</p>
                 {error && (
                   <p className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
                 )}

@@ -1,3 +1,4 @@
+import { trackSync } from '@/lib/integration-health'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -126,6 +127,7 @@ async function runSync(): Promise<SyncResult> {
       // Missing image data must not erase an existing thumbnail.
       ...(gallery?.[0]?.url ? { imageUrl: gallery[0].url } : {}),
       // Etsy's "active" listings can still be sold out.
+      quantity: listing.quantity,
       inStock: listing.quantity > 0 && (existing !== null || variations !== null),
       etsyUrl: listing.url,
       etsySyncedAt: new Date(),
@@ -232,7 +234,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    return NextResponse.json({ ok: true, ...(await runSync()) })
+    return NextResponse.json({ ok: true, ...(await trackSync('etsy-products', runSync)) })
   } catch (e) {
     return failure(e)
   }
@@ -245,7 +247,7 @@ export async function POST() {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   try {
-    return NextResponse.json({ ok: true, ...(await runSync()) })
+    return NextResponse.json({ ok: true, ...(await trackSync('etsy-products', runSync)) })
   } catch (e) {
     return failure(e)
   }
