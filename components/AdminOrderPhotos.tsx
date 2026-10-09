@@ -133,7 +133,6 @@ export default function AdminOrderPhotos({ orderId, initialPhotos }: { orderId: 
             {photos.map((photo) => (
               <div key={photo.id} className="relative group rounded-lg overflow-hidden border border-zinc-200">
                 <div className="aspect-square">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
                     src={photo.url}
                     alt="Order photo"
@@ -168,7 +167,6 @@ export default function AdminOrderPhotos({ orderId, initialPhotos }: { orderId: 
           className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 cursor-zoom-out"
           onClick={() => setExpanded(null)}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={expanded} alt="Order photo" className="max-w-full max-h-full object-contain" />
         </div>
       )}

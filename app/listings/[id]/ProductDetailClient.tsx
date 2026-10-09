@@ -195,7 +195,7 @@ export default function ProductDetailClient({
             className="aspect-square bg-taupe/20 relative rounded-xl overflow-hidden border border-taupe/30 w-full block group cursor-zoom-in"
           >
             <Image src={gallery[active].url} alt={product.name} fill className="object-cover" priority />
-            <span className="absolute bottom-3 right-3 bg-white/85 backdrop-blur-sm rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <span className="absolute bottom-3 right-3 bg-white/85 backdrop-blur-xs rounded-full p-2 opacity-0 group-hover:opacity-100 transition-opacity">
               <svg className="w-4 h-4 text-charcoal" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
               </svg>

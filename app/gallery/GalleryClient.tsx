@@ -183,7 +183,6 @@ export default function GalleryClient({ photos: initialPhotos, isAdmin }: { phot
         <div className="columns-2 sm:columns-3 lg:columns-4 gap-3 space-y-3">
           {filtered.map(photo => (
             <div key={photo.id} className="break-inside-avoid overflow-hidden rounded-lg border border-taupe/30 bg-white group relative">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={photo.url}
                 alt={photo.caption ?? '3D print'}
@@ -245,7 +244,6 @@ export default function GalleryClient({ photos: initialPhotos, isAdmin }: { phot
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => { setShowUploadForm(false); setSelectedFile(null); setPreviewUrl(null) }}>
           <div className="card p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
             <h2 className="text-charcoal font-semibold text-base">Add to Gallery</h2>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={previewUrl} alt="Preview" className="w-full max-h-48 object-contain rounded-lg border border-taupe/30 bg-cream" />
             <div>
               <label className="block text-sm font-medium text-charcoal mb-1">Caption <span className="text-warm-gray">(optional)</span></label>
@@ -285,7 +283,6 @@ export default function GalleryClient({ photos: initialPhotos, isAdmin }: { phot
       {/* Lightbox (non-admin) */}
       {!isAdmin && expanded && !inquiryPhoto && (
         <div className="fixed inset-0 bg-black/95 z-50 flex flex-col items-center justify-center p-4" onClick={() => setExpanded(null)}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={expanded.url} alt={expanded.caption ?? '3D print'} className="max-w-full max-h-[80vh] object-contain rounded-lg" />
           {(expanded.caption || expanded.category) && (
             <div className="mt-4 text-center" onClick={e => e.stopPropagation()}>
@@ -308,7 +305,6 @@ export default function GalleryClient({ photos: initialPhotos, isAdmin }: { phot
         <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4" onClick={() => setInquiryPhoto(null)}>
           <div className="card p-6 w-full max-w-md space-y-4" onClick={e => e.stopPropagation()}>
             <div className="flex items-start gap-4">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={inquiryPhoto.url} alt="" className="w-20 h-20 object-cover rounded-lg border border-taupe/30 shrink-0" />
               <div>
                 <h2 className="text-charcoal font-semibold text-base">Request something like this</h2>

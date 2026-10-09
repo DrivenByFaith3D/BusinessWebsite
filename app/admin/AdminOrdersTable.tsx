@@ -161,12 +161,12 @@ function ShipModal({ orderId, toAddress, onClose, onShipped }: { orderId: string
                     <label className="block text-sm font-medium text-warm-gray mb-1">Weight</label>
                     <div className="flex rounded-lg overflow-hidden border border-taupe/30 bg-cream focus-within:border-charcoal/50">
                       <div className="relative flex-1">
-                        <input className="w-full bg-transparent px-3 py-2 text-sm text-charcoal focus:outline-none" value={dims.weightLb} onChange={setDim('weightLb')} type="number" min="0" step="1" placeholder="0" required />
+                        <input className="w-full bg-transparent px-3 py-2 text-sm text-charcoal focus:outline-hidden" value={dims.weightLb} onChange={setDim('weightLb')} type="number" min="0" step="1" placeholder="0" required />
                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-warm-gray pointer-events-none">lb</span>
                       </div>
                       <div className="w-px bg-taupe/30" />
                       <div className="relative flex-1">
-                        <input className="w-full bg-transparent px-3 py-2 text-sm text-charcoal focus:outline-none" value={dims.weightOz} onChange={setDim('weightOz')} type="number" min="0" max="15" step="1" placeholder="0" required />
+                        <input className="w-full bg-transparent px-3 py-2 text-sm text-charcoal focus:outline-hidden" value={dims.weightOz} onChange={setDim('weightOz')} type="number" min="0" max="15" step="1" placeholder="0" required />
                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-warm-gray pointer-events-none">oz</span>
                       </div>
                     </div>
@@ -199,7 +199,7 @@ function ShipModal({ orderId, toAddress, onClose, onShipped }: { orderId: string
                   }`}
                 >
                   <div className="flex items-center gap-3">
-                    <div className={`w-4 h-4 rounded-full border-2 flex-shrink-0 transition-colors ${
+                    <div className={`w-4 h-4 rounded-full border-2 shrink-0 transition-colors ${
                       selectedRate?.id === rate.id ? 'border-charcoal bg-charcoal' : 'border-taupe/50'
                     }`} />
                     <div>
@@ -352,7 +352,7 @@ function OrderRow({ order, tab, unread, selected, onToggle, onAction }: { order:
               <div className="flex items-center gap-2 flex-wrap">
                 <select value={status} onChange={(e) => updateStatus(e.target.value as OrderStatus)}
                   disabled={busy}
-                  className="text-xs bg-white border border-taupe/30 text-charcoal rounded-lg px-2 py-1 focus:outline-none disabled:opacity-50">
+                  className="text-xs bg-white border border-taupe/30 text-charcoal rounded-lg px-2 py-1 focus:outline-hidden disabled:opacity-50">
                   {STATUSES.map((s) => (
                   <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>
                 ))}
@@ -383,7 +383,7 @@ function OrderRow({ order, tab, unread, selected, onToggle, onAction }: { order:
                     step="0.01"
                     value={quoteValue}
                     onChange={(e) => setQuoteValue(e.target.value)}
-                    className="text-xs bg-white border border-taupe/30 text-charcoal rounded px-2 py-1 w-20 focus:outline-none focus:border-charcoal/50"
+                    className="text-xs bg-white border border-taupe/30 text-charcoal rounded px-2 py-1 w-20 focus:outline-hidden focus:border-charcoal/50"
                     placeholder="0.00"
                     autoFocus
                   />
@@ -616,7 +616,7 @@ export default function AdminOrdersTable({ initialOrders, unreadMap = {} }: { in
             placeholder="Search orders…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="text-xs bg-white border border-taupe/30 text-charcoal rounded-lg pl-7 pr-3 py-1.5 w-48 focus:outline-none focus:border-charcoal/50 placeholder-warm-gray/50"
+            className="text-xs bg-white border border-taupe/30 text-charcoal rounded-lg pl-7 pr-3 py-1.5 w-48 focus:outline-hidden focus:border-charcoal/50 placeholder-warm-gray/50"
           />
         </div>
       </div>
@@ -632,7 +632,7 @@ export default function AdminOrdersTable({ initialOrders, unreadMap = {} }: { in
                   value={bulkStatus}
                   onChange={(e) => setBulkStatus(e.target.value as OrderStatus)}
                   disabled={bulkBusy}
-                  className="text-xs bg-white border border-taupe/30 text-charcoal rounded px-1.5 py-1 focus:outline-none disabled:opacity-50"
+                  className="text-xs bg-white border border-taupe/30 text-charcoal rounded px-1.5 py-1 focus:outline-hidden disabled:opacity-50"
                 >
                   {STATUSES.map((s) => (
                     <option key={s} value={s}>{STATUS_LABELS[s] ?? s}</option>

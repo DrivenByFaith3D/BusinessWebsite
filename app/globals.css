@@ -1,8 +1,20 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+@config "../tailwind.config.ts";
+
+/* Preserve the v3 defaults while upgrading the build tooling. */
+@theme {
+  --default-ring-width: 3px;
+  --default-ring-color: var(--color-blue-500);
+}
+
 
 @layer base {
+  *, ::after, ::before, ::backdrop, ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+  button:not(:disabled), [role="button"]:not(:disabled) { cursor: pointer; }
+  input::placeholder, textarea::placeholder { color: var(--color-gray-400); }
+
   body {
     @apply bg-cream text-charcoal antialiased font-sans;
   }
@@ -20,10 +32,10 @@
     @apply bg-transparent hover:bg-charcoal/5 text-charcoal font-medium px-6 py-2.5 rounded-full border border-charcoal/30 hover:border-charcoal/60 transition-all duration-200 active:scale-[0.98];
   }
   .input {
-    @apply w-full bg-white border border-taupe rounded-full px-5 py-3 text-sm text-charcoal placeholder-warm-gray focus:outline-none focus:ring-2 focus:ring-charcoal/20 focus:border-charcoal/40 transition-all duration-200;
+    @apply w-full bg-white border border-taupe rounded-full px-5 py-3 text-sm text-charcoal placeholder-warm-gray focus:outline-hidden focus:ring-2 focus:ring-charcoal/20 focus:border-charcoal/40 transition-all duration-200;
   }
   .input-textarea {
-    @apply w-full bg-white border border-taupe rounded-2xl px-5 py-3 text-sm text-charcoal placeholder-warm-gray focus:outline-none focus:ring-2 focus:ring-charcoal/20 focus:border-charcoal/40 transition-all duration-200 resize-none;
+    @apply w-full bg-white border border-taupe rounded-2xl px-5 py-3 text-sm text-charcoal placeholder-warm-gray focus:outline-hidden focus:ring-2 focus:ring-charcoal/20 focus:border-charcoal/40 transition-all duration-200 resize-none;
   }
   .input[type=number],
   input[type=number] {
@@ -37,7 +49,7 @@
     margin: 0;
   }
   .card {
-    @apply bg-white rounded-xl border border-taupe/50 shadow-sm;
+    @apply bg-white rounded-xl border border-taupe/50 shadow-xs;
   }
 }
 

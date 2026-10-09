@@ -35,7 +35,7 @@ export default function ForcePasswordChange({ email }: { email: string }) {
   }
 
   return (
-    <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-charcoal/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
       <div className="card p-8 w-full max-w-md">
         <div className="mb-6">
           <h2 className="text-xl font-bold text-charcoal">Set a new password</h2>

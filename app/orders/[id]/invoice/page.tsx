@@ -133,7 +133,6 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
 
         <div className="inv-sheet">
           <div className="inv-head">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/logo.png" alt={SHOP.name} />
             <div className="inv-brand">{SHOP.name}</div>
             <div className="inv-brand-sub">{SHOP.email}</div>

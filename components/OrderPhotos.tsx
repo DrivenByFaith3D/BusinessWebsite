@@ -25,7 +25,6 @@ export default function OrderPhotos({ photos }: { photos: Photo[] }) {
               className="aspect-square rounded-lg overflow-hidden border border-taupe/30 cursor-zoom-in"
               onClick={() => setExpanded(photo.url)}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={fileProxy(photo.url)} alt="Order photo" className="w-full h-full object-cover" />
             </div>
           ))}
@@ -36,7 +35,6 @@ export default function OrderPhotos({ photos }: { photos: Photo[] }) {
           className="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 cursor-zoom-out"
           onClick={() => setExpanded(null)}
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={fileProxy(expanded)} alt="Order photo" className="max-w-full max-h-full object-contain" />
         </div>
       )}

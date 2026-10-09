@@ -11,12 +11,13 @@ export const dynamic = 'force-dynamic'
 // Website orders only count as sales once they're actually paid.
 const PAID_STATUSES = ['paid', 'shipped', 'delivered']
 
-export default async function AdminProductDashboard({ params }: { params: { id: string } }) {
+export default async function AdminProductDashboard({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const session = await getServerSession(authOptions)
   if (!session || session.user.role !== 'admin') redirect('/')
 
   const product = await prisma.product.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       images: { orderBy: { rank: 'asc' } },
       variations: { orderBy: { rank: 'asc' } },
