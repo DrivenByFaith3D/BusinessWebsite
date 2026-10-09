@@ -118,7 +118,7 @@ export default async function HomePage() {
               <div key={b.label} className="flex-1 flex flex-col items-center gap-1.5">
                 <span className="text-xs text-warm-gray">{b.count > 0 ? b.count : ''}</span>
                 <div
-                  className="w-full rounded-sm bg-taupe hover:bg-taupe-dark transition-colors"
+                  className="w-full rounded-xs bg-taupe hover:bg-taupe-dark transition-colors"
                   style={{ height: `${Math.max(4, (b.count / maxBucketCount) * 72)}px` }}
                 />
                 <span className="text-[10px] text-warm-gray">{b.label}</span>
@@ -219,7 +219,7 @@ export default async function HomePage() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-cream/50 via-cream/30 to-cream/70" />
         <div className="relative z-10 h-full flex items-center justify-center px-4 sm:px-6 lg:px-8">
-          <div className="bg-cream/55 backdrop-blur-md rounded-3xl px-8 sm:px-14 py-10 sm:py-14 max-w-3xl text-center shadow-sm">
+          <div className="bg-cream/55 backdrop-blur-md rounded-3xl px-8 sm:px-14 py-10 sm:py-14 max-w-3xl text-center shadow-xs">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-display leading-tight mb-5">
               Precision Prints,<br />Made to Order
             </h1>

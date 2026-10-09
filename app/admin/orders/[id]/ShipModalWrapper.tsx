@@ -109,12 +109,12 @@ export default function ShipModalWrapper({ orderId, customerName, defaultAddress
                   <label className="block text-xs font-medium text-warm-gray mb-1">Weight</label>
                   <div className="flex rounded-lg overflow-hidden border border-taupe/30 bg-cream">
                     <div className="relative flex-1">
-                      <input className="w-full bg-transparent px-3 py-2 text-sm text-charcoal focus:outline-none" value={dims.weightLb} onChange={setDim('weightLb')} type="number" min="0" required />
+                      <input className="w-full bg-transparent px-3 py-2 text-sm text-charcoal focus:outline-hidden" value={dims.weightLb} onChange={setDim('weightLb')} type="number" min="0" required />
                       <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-warm-gray">lb</span>
                     </div>
                     <div className="w-px bg-taupe/30" />
                     <div className="relative flex-1">
-                      <input className="w-full bg-transparent px-3 py-2 text-sm text-charcoal focus:outline-none" value={dims.weightOz} onChange={setDim('weightOz')} type="number" min="0" max="15" required />
+                      <input className="w-full bg-transparent px-3 py-2 text-sm text-charcoal focus:outline-hidden" value={dims.weightOz} onChange={setDim('weightOz')} type="number" min="0" max="15" required />
                       <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-warm-gray">oz</span>
                     </div>
                   </div>

@@ -1,3 +1,4 @@
+import { overallReviewAverage } from '@/lib/review-stats'
 import { productThumbnail } from '@/lib/product-image'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -41,10 +42,7 @@ export default async function AdminProductsPage() {
   })
 
   const totalReviews = productsWithStats.reduce((s, p) => s + p.reviewCount, 0)
-  const rated = productsWithStats.filter(p => p.reviewCount > 0)
-  const overallAvg = rated.length
-    ? rated.reduce((s, p) => s + p.avgRating, 0) / rated.length
-    : null
+  const overallAvg = overallReviewAverage(productsWithStats)
   const mostReviewed = [...productsWithStats].sort((a, b) => b.reviewCount - a.reviewCount)[0]
 
   return (

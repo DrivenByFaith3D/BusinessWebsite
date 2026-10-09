@@ -44,7 +44,7 @@ export default function CustomerNotes({ orderId, initialNotes }: { orderId: stri
         onBlur={save}
         rows={3}
         placeholder="Add a note for the customer (e.g. color choice needed, special instructions)…"
-        className="w-full bg-cream border border-zinc-200 rounded-lg px-3 py-2 text-sm text-charcoal placeholder-warm-gray focus:outline-none focus:border-zinc-400 resize-none"
+        className="w-full bg-cream border border-zinc-200 rounded-lg px-3 py-2 text-sm text-charcoal placeholder-warm-gray focus:outline-hidden focus:border-zinc-400 resize-none"
       />
     </div>
   )

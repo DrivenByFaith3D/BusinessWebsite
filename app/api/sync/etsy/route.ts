@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
+import { saveEtsyProduct } from '@/lib/etsy-sync'
 import { sendEmail, backInStockEmailHtml } from '@/lib/brevo'
 import {
   EtsyNotConfiguredError,
@@ -26,6 +27,8 @@ interface SyncResult {
   deactivated: number
   total: number
   reviews: number
+  partial: boolean
+  warnings: string[]
 }
 
 // Mirror Etsy reviews and attach each to its product via the listing id. Reviews
@@ -99,6 +102,7 @@ async function runSync(): Promise<SyncResult> {
   const details = await fetchListingDetails(listings.map((l) => l.listing_id))
 
   const seen: string[] = []
+  const warnings: string[] = []
   let created = 0
   let updated = 0
 
@@ -108,8 +112,11 @@ async function runSync(): Promise<SyncResult> {
 
     const detail = details.get(listing.listing_id)
     const gallery = orderedImages(detail)
+    if (gallery === null) warnings.push(`Listing ${etsyListingId}: image details incomplete; saved gallery retained.`)
     const shipping = shippingSummary(listing, detail)
+    const existing = await prisma.product.findUnique({ where: { etsyListingId } })
     const variations = parseVariations(detail)
+    if (variations === null) warnings.push(`Listing ${etsyListingId}: inventory incomplete; saved options retained.`)
 
     const data = {
       name: listing.title,
@@ -117,9 +124,9 @@ async function runSync(): Promise<SyncResult> {
       price: listingPrice(listing),
       // Primary thumbnail; the grid and cart already read this field.
       // Missing image data must not erase an existing thumbnail.
-      ...(gallery[0]?.url ? { imageUrl: gallery[0].url } : {}),
+      ...(gallery?.[0]?.url ? { imageUrl: gallery[0].url } : {}),
       // Etsy's "active" listings can still be sold out.
-      inStock: listing.quantity > 0,
+      inStock: listing.quantity > 0 && (existing !== null || variations !== null),
       etsyUrl: listing.url,
       etsySyncedAt: new Date(),
       processingMin: shipping.processingMin,
@@ -143,13 +150,10 @@ async function runSync(): Promise<SyncResult> {
       personalizationInstructions: detail?.personalization?.personalization_instructions ?? null,
       numFavorers: listing.num_favorers ?? null,
       etsyViews: listing.views ?? null,
-      hasVariations: variations.length > 0,
+      ...(variations !== null ? { hasVariations: variations.length > 0 } : {}),
     }
 
-    const existing = await prisma.product.findUnique({ where: { etsyListingId } })
-    const product = existing
-      ? await prisma.product.update({ where: { etsyListingId }, data })
-      : await prisma.product.create({ data: { ...data, etsyListingId } })
+    const product = await saveEtsyProduct(prisma, etsyListingId, !!existing, data, gallery, variations)
     existing ? updated++ : created++
 
     // Restocked? Email everyone who asked to be told. Best-effort — never let a
@@ -160,21 +164,6 @@ async function runSync(): Promise<SyncResult> {
       } catch (e) {
         console.error('Back-in-stock notify failed:', e instanceof Error ? e.message : e)
       }
-    }
-
-    // Replace gallery and variations wholesale: Etsy is the source of truth, and
-    // reconciling individual rows is not worth the complexity at this size.
-    if (gallery.length > 0) {
-      await prisma.productImage.deleteMany({ where: { productId: product.id } })
-      await prisma.productImage.createMany({
-        data: gallery.map((img, rank) => ({
-          productId: product.id,
-          url: img.url,
-          fullUrl: img.fullUrl,
-          etsyImageId: img.etsyImageId,
-          rank,
-        })),
-      })
     }
 
     // Colour photos: if the seller assigned per-colour images on Etsy, mirror them
@@ -197,23 +186,6 @@ async function runSync(): Promise<SyncResult> {
     } catch (e) {
       console.error('Variation-image sync failed:', e instanceof Error ? e.message : e)
     }
-
-    await prisma.productVariation.deleteMany({ where: { productId: product.id } })
-    if (variations.length > 0) {
-      await prisma.productVariation.createMany({
-        data: variations.map((v, rank) => ({
-          productId: product.id,
-          etsyProductId: v.etsyProductId,
-          sku: v.sku,
-          price: v.price,
-          quantity: v.quantity,
-          isEnabled: v.isEnabled,
-          label: v.label,
-          options: v.options,
-          rank,
-        })),
-      })
-    }
   }
 
   // Anything previously pulled from Etsy that is no longer active gets hidden
@@ -233,10 +205,11 @@ async function runSync(): Promise<SyncResult> {
   try {
     reviews = await syncReviews(shopId)
   } catch (e) {
+    warnings.push('Reviews could not be synced; saved reviews retained.')
     console.error('Etsy review sync failed:', e instanceof Error ? e.message : e)
   }
 
-  return { created, updated, deactivated, total: listings.length, reviews }
+  return { created, updated, deactivated, total: listings.length, reviews, partial: warnings.length > 0, warnings }
 }
 
 function failure(e: unknown) {
@@ -251,10 +224,10 @@ function failure(e: unknown) {
   return NextResponse.json({ error: message }, { status: 502 })
 }
 
-// Scheduled run (Vercel Cron). Protected by CRON_SECRET when one is configured.
+// Scheduled run (Vercel Cron). Fail closed when no cron secret is configured.
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET?.trim()
-  if (secret && req.headers.get('authorization') !== `Bearer ${secret}`) {
+  if (!secret || req.headers.get('authorization') !== `Bearer ${secret}`) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

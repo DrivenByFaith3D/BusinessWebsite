@@ -16,7 +16,7 @@ export default function ServicesStorePage() {
         />
         <div className="absolute inset-0 bg-gradient-to-b from-cream/50 via-cream/30 to-cream/70" />
         <div className="relative z-10 h-full flex items-center justify-center px-4 sm:px-6 lg:px-8">
-          <div className="bg-cream/55 backdrop-blur-md rounded-3xl px-8 sm:px-14 py-10 sm:py-14 max-w-3xl text-center shadow-sm">
+          <div className="bg-cream/55 backdrop-blur-md rounded-3xl px-8 sm:px-14 py-10 sm:py-14 max-w-3xl text-center shadow-xs">
             <h2 className="text-3xl sm:text-4xl lg:text-5xl font-display leading-tight mb-5">
               Our Printing Services
             </h2>

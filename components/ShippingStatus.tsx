@@ -67,7 +67,7 @@ export default function ShippingStatus({ order }: { order: Order }) {
       finally { setLoading(false) }
     }
     fetchTracking()
-  }, [order.trackingNumber, order.carrier])
+  }, [order.id, order.trackingNumber, order.carrier])
 
   return (
     <div className="card p-5">

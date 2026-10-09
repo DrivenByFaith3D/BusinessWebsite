@@ -58,7 +58,7 @@ export default function QuantityStepper({
           if (e.key === 'Enter') { e.preventDefault(); commit(text); (e.target as HTMLInputElement).blur() }
         }}
         aria-label={label}
-        className={`${input} text-center font-medium text-charcoal bg-transparent border-0 focus:outline-none`}
+        className={`${input} text-center font-medium text-charcoal bg-transparent border-0 focus:outline-hidden`}
       />
       <button
         type="button"

@@ -215,7 +215,6 @@ export default function NewOrderPage() {
                       >
                         <div className="aspect-square rounded-lg overflow-hidden bg-taupe/15 mb-2">
                           {p.imageUrl && (
-                            // eslint-disable-next-line @next/next/no-img-element
                             <img src={p.imageUrl} alt={p.name} className="w-full h-full object-cover" />
                           )}
                         </div>

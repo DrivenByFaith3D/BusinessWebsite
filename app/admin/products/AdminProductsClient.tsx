@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useSearchParams } from 'next/navigation'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Image from 'next/image'
 import Link from 'next/link'
 
@@ -37,6 +37,7 @@ export default function AdminProductsClient({
   const [syncMessage, setSyncMessage] = useState('')
 
   // Surface the ?etsy= status the OAuth callback redirects back with.
+  const router = useRouter()
   const searchParams = useSearchParams()
   const [connectNotice, setConnectNotice] = useState<{ text: string; ok: boolean } | null>(null)
   useEffect(() => {
@@ -54,10 +55,10 @@ export default function AdminProductsClient({
         setSyncMessage(data.error || 'Sync failed.')
       } else {
         setSyncMessage(
-          `Synced ${data.total} listing${data.total === 1 ? '' : 's'}: ${data.created} new, ${data.updated} updated, ${data.deactivated} hidden.`,
+          `${data.partial ? 'Partial sync' : 'Synced'} ${data.total} listing${data.total === 1 ? '' : 's'}: ${data.created} new, ${data.updated} updated, ${data.deactivated} hidden.${data.partial ? ` ${data.warnings.join(' ')}` : ''}`,
         )
         // Reload so the catalog reflects what the sync just wrote.
-        window.location.reload()
+        router.refresh()
       }
     } catch {
       setSyncMessage('Network error. Please try again.')
@@ -108,7 +109,7 @@ export default function AdminProductsClient({
         </p>
         <div className="flex items-center gap-3 shrink-0">
           {syncMessage && (
-            <p className={`text-xs ${syncMessage.startsWith('Synced') ? 'text-green-700' : 'text-red-600'}`}>
+            <p className={`text-xs ${syncMessage.startsWith('Partial sync') ? 'text-amber-700' : syncMessage.startsWith('Synced') ? 'text-green-700' : 'text-red-600'}`}>
               {syncMessage}
             </p>
           )}

@@ -145,8 +145,26 @@ export interface ParsedVariation {
 
 // Etsy models each buyable combination as an inventory "product" with property
 // values (Primary color: Army Blue) and offerings (price/quantity).
-export function parseVariations(listing: EtsyListing | undefined): ParsedVariation[] {
-  const products = listing?.inventory?.products ?? []
+// null means incomplete data: callers must preserve the saved options.
+export function parseVariations(listing: EtsyListing | undefined): ParsedVariation[] | null {
+  if (!listing) return null
+  const products = listing.inventory?.products
+  if (!Array.isArray(products)) return listing.has_variations === false ? [] : null
+  if (products.length === 0) return listing.has_variations === false ? [] : null
+  for (const p of products) {
+    if (!p || typeof p !== 'object') return null
+    if (p.is_deleted) continue
+    if (!Array.isArray(p.property_values) || !Array.isArray(p.offerings)) return null
+    if (p.offerings.some(o => !o || typeof o !== 'object')) return null
+    if (p.property_values.some(pv => !pv || typeof pv.property_name !== 'string' ||
+      !pv.property_name.trim() || !Array.isArray(pv.values) || pv.values.length === 0 ||
+      pv.values.some(value => typeof value !== 'string' || !value.trim()))) return null
+    const offering = p.offerings.find(o => o && !o.is_deleted)
+    if (!offering || !Number.isInteger(offering.quantity) || offering.quantity! < 0 ||
+      typeof offering.is_enabled !== 'boolean' || !offering.price ||
+      !Number.isFinite(offering.price.amount) || offering.price.amount < 0 ||
+      !Number.isFinite(offering.price.divisor) || offering.price.divisor <= 0) return null
+  }
   const out: ParsedVariation[] = []
 
   for (const p of products) {
@@ -170,6 +188,7 @@ export function parseVariations(listing: EtsyListing | undefined): ParsedVariati
     })
   }
 
+  if (listing.has_variations === true && out.length === 0) return null
   return out
 }
 
@@ -279,12 +298,26 @@ export async function fetchListingDetails(
 // Etsy ranks images; keep that order so the shop matches the Etsy gallery.
 export function orderedImages(
   listing: EtsyListing | undefined,
-): { url: string; fullUrl: string | null; etsyImageId: string | null }[] {
-  if (!listing?.images) return []
+): { url: string; fullUrl: string | null; etsyImageId: string | null }[] | null {
+  if (!Array.isArray(listing?.images)) return null
+  // Reject the entire replacement if even one image is malformed.
+  const validUrl = (value: unknown) => {
+    if (typeof value !== 'string') return false
+    try {
+      const url = new URL(value)
+      return url.protocol === 'https:' && url.hostname === 'i.etsystatic.com' &&
+        !url.username && !url.password
+    } catch { return false }
+  }
+  if (listing.images.some(img => !img ||
+    !validUrl(img.url_570xN || img.url_fullxfull) ||
+    (img.url_fullxfull != null && !validUrl(img.url_fullxfull)) ||
+    (img.rank != null && (!Number.isInteger(img.rank) || img.rank < 0)) ||
+    (img.listing_image_id != null && (!Number.isSafeInteger(img.listing_image_id) || img.listing_image_id <= 0)))) return null
   return [...listing.images]
     .sort((a, b) => (a.rank ?? 0) - (b.rank ?? 0))
     .map((img) => ({
-      url: img.url_570xN ?? img.url_fullxfull ?? '',
+      url: img.url_570xN || img.url_fullxfull || '',
       fullUrl: img.url_fullxfull ?? null,
       etsyImageId: img.listing_image_id != null ? String(img.listing_image_id) : null,
     }))
