@@ -1,3 +1,4 @@
+import { productThumbnail } from '@/lib/product-image'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import { getServerSession } from 'next-auth'
@@ -48,7 +49,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           name: product.name,
           description: product.description,
           price: product.price,
-          imageUrl: product.imageUrl,
+          imageUrl: productThumbnail(product),
           inStock: product.inStock,
           etsyUrl: product.etsyUrl,
           processingMin: product.processingMin,

@@ -116,7 +116,8 @@ async function runSync(): Promise<SyncResult> {
       description: listing.description,
       price: listingPrice(listing),
       // Primary thumbnail; the grid and cart already read this field.
-      imageUrl: gallery[0]?.url ?? null,
+      // Missing image data must not erase an existing thumbnail.
+      ...(gallery[0]?.url ? { imageUrl: gallery[0].url } : {}),
       // Etsy's "active" listings can still be sold out.
       inStock: listing.quantity > 0,
       etsyUrl: listing.url,

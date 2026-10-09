@@ -1,3 +1,4 @@
+import { productThumbnail } from '@/lib/product-image'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -14,6 +15,7 @@ export default async function AdminProductsPage() {
   const products = await prisma.product.findMany({
     orderBy: { createdAt: 'desc' },
     include: {
+      images: { orderBy: { rank: 'asc' }, take: 1, select: { url: true } },
       variations: { orderBy: { rank: 'asc' }, select: { label: true, quantity: true, isEnabled: true } },
       reviews: { select: { rating: true } },
       etsyReviews: { select: { rating: true } },
@@ -28,7 +30,7 @@ export default async function AdminProductsPage() {
       id: p.id,
       name: p.name,
       price: p.price,
-      imageUrl: p.imageUrl,
+      imageUrl: productThumbnail(p),
       inStock: p.inStock,
       isEtsy: p.etsyListingId != null,
       imageCount: p._count.images,

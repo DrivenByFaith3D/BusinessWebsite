@@ -1,3 +1,4 @@
+import { productThumbnail } from '@/lib/product-image'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -9,6 +10,7 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
   const products = await prisma.product.findMany({
     orderBy: { createdAt: 'desc' },
     include: {
+      images: { orderBy: { rank: 'asc' }, take: 1, select: { url: true } },
       reviews: { select: { rating: true } },
       etsyReviews: { select: { rating: true } },
     },
@@ -49,7 +51,7 @@ export default async function ListingsPage({ searchParams }: { searchParams: Pro
               ...product.etsyReviews.map((r) => r.rating),
             ]
             const avg = ratings.length ? ratings.reduce((s, r) => s + r, 0) / ratings.length : null
-            return <ProductCard key={product.id} product={product} avgRating={avg} reviewCount={ratings.length} isLoggedIn={!!session} />
+            return <ProductCard key={product.id} product={{ ...product, imageUrl: productThumbnail(product) }} avgRating={avg} reviewCount={ratings.length} isLoggedIn={!!session} />
           })}
         </div>
       )}

@@ -1,10 +1,16 @@
+import { productThumbnail } from '@/lib/product-image'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireAdmin } from '@/lib/api'
 
 export async function GET() {
-  const products = await prisma.product.findMany({ orderBy: { createdAt: 'desc' } })
-  return NextResponse.json(products)
+  const products = await prisma.product.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: { images: { orderBy: { rank: 'asc' }, take: 1, select: { url: true } } },
+  })
+  return NextResponse.json(products.map(({ images, ...product }) => ({
+    ...product, imageUrl: productThumbnail({ ...product, images }),
+  })))
 }
 
 export async function POST(req: NextRequest) {
