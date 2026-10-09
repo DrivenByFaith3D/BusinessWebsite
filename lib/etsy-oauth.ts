@@ -8,7 +8,7 @@ const ETSY_API = 'https://openapi.etsy.com/v3/application'
 const REFRESH_BUFFER_MS = 5 * 60 * 1000
 
 // Both scopes: read receipts, and write shipment tracking back to Etsy.
-export const ETSY_SCOPES = 'transactions_r transactions_w'
+export const ETSY_SCOPES = 'transactions_r transactions_w listings_r shops_r'
 
 export class EtsyNotConnectedError extends Error {
   constructor() {
@@ -38,9 +38,9 @@ export async function isEtsyConnected(): Promise<boolean> {
   return !!row
 }
 
-export async function getConnection(): Promise<{ shopId: string; updatedAt: Date } | null> {
+export async function getConnection(): Promise<{ shopId: string; updatedAt: Date; scope: string | null } | null> {
   const row = await prisma.etsyToken.findUnique({ where: { id: 'shop' } })
-  return row ? { shopId: row.shopId, updatedAt: row.updatedAt } : null
+  return row ? { shopId: row.shopId, updatedAt: row.updatedAt, scope: row.scope } : null
 }
 
 export async function saveTokens(
@@ -92,14 +92,20 @@ export async function getValidAccessToken(): Promise<{ accessToken: string; shop
   return { accessToken: data.access_token, shopId: row.shopId }
 }
 
-// Authenticated GET against the Etsy API, refreshing the token as needed.
-export async function etsyAuthedGet<T>(path: string): Promise<T> {
-  const { accessToken } = await getValidAccessToken()
-  const res = await fetch(`${ETSY_API}${path}`, { headers: oauthHeaders(accessToken), cache: 'no-store' })
-  if (!res.ok) {
-    throw new Error(`Etsy ${res.status} on ${path}: ${(await res.text()).slice(0, 300)}`)
+// Reuse a single token refresh within one sync, including parallel batch reads.
+export function createEtsyAuthedReader() {
+  let token: ReturnType<typeof getValidAccessToken> | undefined
+  return async function read<T>(path: string): Promise<T> {
+    token ??= getValidAccessToken()
+    const { accessToken } = await token
+    const res = await fetch(`${ETSY_API}${path}`, { headers: oauthHeaders(accessToken), cache: 'no-store' })
+    if (!res.ok) throw new Error(`Etsy ${res.status} on ${path}: ${(await res.text()).slice(0, 300)}`)
+    return res.json() as Promise<T>
   }
-  return res.json() as Promise<T>
+}
+
+export async function etsyAuthedGet<T>(path: string): Promise<T> {
+  return createEtsyAuthedReader()<T>(path)
 }
 
 export async function etsyAuthedPost<T>(path: string, body: Record<string, unknown>): Promise<T> {

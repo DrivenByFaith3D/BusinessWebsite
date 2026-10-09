@@ -42,7 +42,7 @@ export default function NavbarClient({ user, navLinks }: { user: User | null; na
         {/* Hamburger, mobile only */}
         <button
           onClick={() => setMobileOpen((v) => !v)}
-          className="md:hidden p-2 rounded-lg text-warm-gray hover:text-charcoal transition-colors"
+          className="xl:hidden p-2 rounded-lg text-warm-gray hover:text-charcoal transition-colors"
           aria-label="Menu"
         >
           {mobileOpen ? (
@@ -57,7 +57,7 @@ export default function NavbarClient({ user, navLinks }: { user: User | null; na
         </button>
 
         {/* Desktop: CTA + user menu */}
-        <div className="hidden md:flex items-center gap-3">
+        <div className="hidden xl:flex items-center gap-3">
           {!user && (
             <Link href="/orders/new" className="btn-primary text-sm">
               Request a Custom Print
@@ -102,7 +102,7 @@ export default function NavbarClient({ user, navLinks }: { user: User | null; na
 
       {/* Mobile menu */}
       {mobileOpen && (
-        <div className="absolute top-16 left-0 right-0 bg-cream border-b border-taupe/30 z-40 md:hidden shadow-lg">
+        <div className="absolute top-16 left-0 right-0 bg-cream border-b border-taupe/30 z-40 xl:hidden shadow-lg">
           <div className="px-4 py-3 space-y-1">
             {navLinks.map((link) => (
               <Link key={link.href} href={link.href}

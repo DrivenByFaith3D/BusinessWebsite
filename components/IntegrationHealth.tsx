@@ -75,6 +75,9 @@ export default function IntegrationHealth({
           </div>
         ))}
       </div>
+      <a href="/api/etsy/connect" className="inline-block text-sm underline mt-4">
+        Reconnect Etsy permissions
+      </a>
       {message && (
         <p role="status" className="text-sm mt-4">
           {message}

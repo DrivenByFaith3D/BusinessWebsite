@@ -22,7 +22,7 @@
 - Reservations are released only after Stripe confirms expiry/failure. A delayed paid webhook is reconciled before stock can be reused. Stripe session creation uses an idempotency key, and custom checkout also resumes its existing open session.
 - A durable Stripe event marker commits with payment state and stock deduction. Repeated events don't decrement stock again, regress shipped orders, or send a second confirmation. Database failures return HTTP 500 so Stripe can retry. The receipt page can reconcile a verified payment before the webhook arrives.
 - Local `websiteSold` counters prevent the next Etsy sync from undoing website stock deductions. Etsy itself is still an external sales channel: this release does not write website purchases into Etsy inventory. Stock is refreshed on the existing daily sync or a manual retry. Simultaneous Etsy/site sales between syncs remain an external coordination limit. If stock is manually reconciled directly in Etsy, reconcile the website counters too rather than counting the same sale twice.
-- An unknown stock count on a manually created product remains made-to-order stock (`quantity = null`). Etsy products get a numeric total on their next product sync; existing options already have numeric counts.
+- An unknown stock count on a manually created product remains made-to-order stock (`quantity = null`). Etsy products get a numeric total on product sync; the existing live product total was initialized during the deployment check. existing options already have numeric counts.
 - Receipt email failures are visible in integration health for owner follow-up. Emails aren't a transactional provider outbox: a process interruption after payment commits can require manual follow-up. Payment and receipt records remain intact.
 - Very old pre-upgrade pending rows without a Stripe session aren't counted as live reservations. Recorded legacy Stripe sessions are checked for expiry on checkout. Existing paid orders without a receipt token retain their previous account-order display.
 
@@ -34,7 +34,9 @@ Do not use `prisma db push` against production. For a database behind a transact
 
 ## Verification
 
-- 13 unit/regression tests cover Etsy partial responses, gallery rollback, weighted ratings, cart recovery, personalization, quantity validation, and inbox next actions.
+- Etsy retired Inventory/Shipping includes in July 2026. Public images and metadata now refresh independently from the new scoped inventory/shipping batch endpoints. The existing business connection only grants transaction permissions: the owner must reconnect once to grant `listings_r` and `shops_r`. Until then, inventory/shipping details remain partial and saved values stay intact. The dashboard shows the required reconnection link. See [Etsy’s migration guide](https://developer.etsy.com/documentation/tutorials/inventory-shipping-migration/).
+
+- 14 unit/regression tests cover Etsy partial responses, gallery rollback, weighted ratings, cart recovery, personalization, quantity validation, and inbox next actions.
 - 10 isolated PostgreSQL integration tests cover concurrent buyers, duplicate session creation, duplicate signed webhook deliveries, atomic payment/event rollback, delayed webhooks, stock preservation through sync, unlimited stock, custom-payment status preservation, and persistent/retryable sync health.
 - The opt-in integration suite refuses non-loopback databases and requires the database name `flow_test`. Run `DATABASE_URL=<isolated loopback connection> npm run test:integration` after applying the schema to a disposable database. Stripe calls are mocked and no real payments or receipt emails are sent.
 - Lint, TypeScript, production build, and production dependency audit pass.

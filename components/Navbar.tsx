@@ -38,7 +38,7 @@ export default async function Navbar() {
           </Link>
 
           {/* Desktop nav links */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden xl:flex items-center gap-8">
             {navLinks.map((link) => (
               <Link key={link.href} href={link.href}
                 className="text-warm-gray hover:text-charcoal text-sm font-medium transition-colors">

@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { prisma } from '@/lib/prisma'
+import { getConnection } from '@/lib/etsy-oauth'
 import IntegrationHealth from './IntegrationHealth'
 
 export default async function AdminActionCenter({ userId }: { userId: string }) {
@@ -14,6 +15,7 @@ export default async function AdminActionCenter({ userId }: { userId: string }) 
     readyPrint,
     readyShip,
     health,
+    etsyConnection,
   ] = await Promise.all([
     // Compare each order's messages with this owner's last view in one DB query.
     prisma.$queryRaw<
@@ -50,6 +52,7 @@ export default async function AdminActionCenter({ userId }: { userId: string }) 
       where: { deletedAt: null, archivedAt: null, status: 'in_progress', paymentStatus: 'paid' },
     }),
     prisma.integrationSync.findMany(),
+    getConnection(),
   ])
   const cards = [
     { title: 'Unread messages', count: Number(unread[0]?.count ?? 0), href: '/admin/inbox?unread=1' },
@@ -70,7 +73,14 @@ export default async function AdminActionCenter({ userId }: { userId: string }) 
       status: stale ? 'failed' : (e?.status ?? 'unknown'),
       lastAttemptAt: e?.lastAttemptAt.toISOString() ?? null,
       lastSuccessAt: e?.lastSuccessAt?.toISOString() ?? null,
-      message: stale ? 'The sync did not finish. Retry to recover.' : (e?.message ?? null),
+      message:
+        key === 'etsy-products' &&
+        (!etsyConnection?.scope?.split(' ').includes('listings_r') ||
+          !etsyConnection?.scope?.split(' ').includes('shops_r'))
+          ? 'Etsy now requires inventory and shipping read permissions. Reconnect Etsy once, then retry sync. Saved options and photos are retained.'
+          : stale
+            ? 'The sync did not finish. Retry to recover.'
+            : (e?.message ?? null),
     }
   })
   return (
