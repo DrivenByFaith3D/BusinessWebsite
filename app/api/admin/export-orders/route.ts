@@ -50,7 +50,7 @@ type Sale = {
   status: string;
 };
 
-const PAID_SHOP = ["paid", "shipped", "delivered"];
+const PAID_SHOP = ["paid", "printing", "shipped", "delivered"];
 
 export async function GET(req: NextRequest) {
   if (!isAuthorized(req)) {

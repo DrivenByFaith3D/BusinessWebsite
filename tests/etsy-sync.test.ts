@@ -39,12 +39,13 @@ function database(failInsert = false) {
   const db = { async $transaction(callback: (tx: unknown) => Promise<unknown>) {
     const draft = structuredClone(state)
     const tx = {
-      product: { async update({ data }: { data: { imageUrl?: string } }) { draft.thumbnail = data.imageUrl ?? draft.thumbnail; return { id: 'product-1' } } },
+      product: { async findUnique() { return { websiteSold: 0 } }, async update({ data }: { data: { imageUrl?: string } }) { draft.thumbnail = data.imageUrl ?? draft.thumbnail; return { id: 'product-1' } } },
       productImage: {
         async deleteMany() { draft.images = [] },
         async createMany({ data }: { data: { url: string }[] }) { if (failInsert) throw new Error('image insertion failed'); draft.images = data.map(i => i.url) },
       },
       productVariation: {
+        async findMany() { return [] },
         async deleteMany() { draft.variations = [] },
         async createMany({ data }: { data: { label: string }[] }) { draft.variations = data.map(v => v.label) },
       },
@@ -104,5 +105,32 @@ test('failed detail requests preserve the distinction between unavailable data a
     else process.env.ETSY_KEYSTRING = originalKey
     if (originalSecret === undefined) delete process.env.ETSY_SHARED_SECRET
     else process.env.ETSY_SHARED_SECRET = originalSecret
+  }
+})
+
+test('Etsy metadata, inventory and shipping use separate endpoints; a denied scope keeps images', async () => {
+  const { fetchListingDetails } = await import('../lib/etsy')
+  const originalFetch = globalThis.fetch
+  const originalKey = process.env.ETSY_KEYSTRING
+  const originalSecret = process.env.ETSY_SHARED_SECRET
+  const originalError = console.error
+  process.env.ETSY_KEYSTRING = 'test-key'; process.env.ETSY_SHARED_SECRET = 'test-secret'
+  const paths: string[] = []
+  globalThis.fetch = async url => { paths.push(String(url)); return Response.json({ results: [{ listing_id: 1, has_variations: true, images: [{ url_570xN: 'https://i.etsystatic.com/a.jpg' }] }] }) }
+  console.error = () => {}
+  try {
+    const privateGet = async (path: string) => { paths.push(path); if (path.includes('/shipping')) throw new Error('Etsy 403: missing shops_r'); return { results: [listing({ inventory: { products: [product] } })] } }
+    const details = await fetchListingDetails([1], undefined, privateGet)
+    assert.equal(orderedImages(details.get(1))?.length, 1)
+    assert.equal(parseVariations(details.get(1))?.[0].quantity, 2)
+    assert.equal(details.get(1)?.shipping_profile, undefined)
+    assert.equal(paths.some(p => p.includes('includes=Images,Videos,Personalization')), true)
+    assert.equal(paths.some(p => p.includes('includes=Images,Shipping')), false)
+    assert.equal(paths.some(p => p.includes('/batch/inventory')), true)
+    assert.equal(paths.some(p => p.includes('/batch/shipping')), true)
+  } finally {
+    globalThis.fetch = originalFetch; console.error = originalError
+    if (originalKey === undefined) delete process.env.ETSY_KEYSTRING; else process.env.ETSY_KEYSTRING = originalKey
+    if (originalSecret === undefined) delete process.env.ETSY_SHARED_SECRET; else process.env.ETSY_SHARED_SECRET = originalSecret
   }
 })

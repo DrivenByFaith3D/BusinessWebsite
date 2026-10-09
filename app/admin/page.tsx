@@ -1,3 +1,4 @@
+import AdminActionCenter from '@/components/AdminActionCenter'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
@@ -7,7 +8,7 @@ import { quarterStart, quarterLabel, taxEnabled } from '@/lib/tax'
 
 export const dynamic = 'force-dynamic'
 
-const PAID_SHOP = ['paid', 'shipped', 'delivered']
+const PAID_SHOP = ['paid', 'printing', 'shipped', 'delivered']
 const LOW_STOCK_THRESHOLD = 3
 const money = (n: number) => `$${n.toFixed(2)}`
 
@@ -79,6 +80,7 @@ export default async function AdminPage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+      <AdminActionCenter userId={session.user.id} />
       <h1 className="text-2xl font-bold text-charcoal mb-8">Admin Dashboard</h1>
 
       {/* Sales tax to remit (website sales; Etsy remits its own) */}

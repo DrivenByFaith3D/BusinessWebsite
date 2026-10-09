@@ -12,7 +12,7 @@ export default async function Navbar() {
   const navLinks = [
     ...(!isAdmin ? [
       { label: 'Services', href: '/services-store' },
-      { label: 'Shop', href: '/listings' },
+      { label: 'Shop Products', href: '/listings' },
       // Signed-in customers get their orders straight from the nav rather than
       // buried in the account dropdown; guests get a public tracking lookup.
       ...(isCustomer ? [{ label: 'My Orders', href: '/orders' }] : [{ label: 'Track Order', href: '/track' }]),
@@ -21,8 +21,7 @@ export default async function Navbar() {
     ] : []),
     ...(isAdmin ? [
       { label: 'Dashboard', href: '/' },
-      { label: 'Orders', href: '/admin/orders' },
-      { label: 'Etsy Orders', href: '/admin/etsy-orders' },
+      { label: 'Order Inbox', href: '/admin/inbox' },
       { label: 'Availability', href: '/admin/availability' },
       { label: 'Products', href: '/admin/products' },
       { label: 'Users', href: '/admin/users' },
@@ -39,7 +38,7 @@ export default async function Navbar() {
           </Link>
 
           {/* Desktop nav links */}
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden xl:flex items-center gap-8">
             {navLinks.map((link) => (
               <Link key={link.href} href={link.href}
                 className="text-warm-gray hover:text-charcoal text-sm font-medium transition-colors">

@@ -51,6 +51,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
           price: product.price,
           imageUrl: productThumbnail(product),
           inStock: product.inStock,
+          quantity: product.quantity,
           etsyUrl: product.etsyUrl,
           processingMin: product.processingMin,
           processingMax: product.processingMax,

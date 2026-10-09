@@ -14,6 +14,7 @@ interface Product {
   price: number
   imageUrl: string | null
   inStock: boolean
+  quantity: number | null
   etsyUrl: string | null
   processingMin: number | null
   processingMax: number | null
@@ -111,6 +112,7 @@ export default function ProductDetailClient({
   const [qty, setQty] = useState(1)
   const [added, setAdded] = useState(false)
   const [error, setError] = useState('')
+  const [personalization, setPersonalization] = useState('')
   const { addItem } = useCart()
 
   const step = useCallback((delta: number) => {
@@ -143,13 +145,16 @@ export default function ProductDetailClient({
 
   // Cap at what's actually in stock for the chosen option, so the cart can't hold
   // more than can be bought.
-  const stockLimit = Math.min(MAX_QTY, selected ? selected.quantity : Infinity)
+  const stockLimit = Math.min(MAX_QTY, selected ? selected.quantity : (product.quantity ?? Infinity))
 
   function handleAddToCart() {
     if (needsChoice) {
       setError(`Please choose a ${optionName.toLowerCase()}.`)
+      document.getElementById('purchase-options')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
       return
     }
+    if (product.isPersonalizable && !personalization.trim()) { setError('Please enter your personalization details.'); document.getElementById('personalization')?.focus(); return }
+    if (qty > stockLimit) { setError('Please lower the quantity for this option.'); return }
     setError('')
     addItem({
       productId: product.id,
@@ -159,6 +164,7 @@ export default function ProductDetailClient({
       variationId: selected?.id ?? null,
       variationLabel: selected?.label ?? null,
       quantity: qty,
+      personalization: product.isPersonalizable ? personalization.trim() : null,
     })
     setAdded(true)
     setTimeout(() => setAdded(false), 1800)
@@ -185,7 +191,7 @@ export default function ProductDetailClient({
   const soldOut = !product.inStock || (variations.length > 0 && buyable.length === 0)
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 pb-24 lg:pb-0">
       {/* Gallery */}
       <div>
         {gallery.length > 0 ? (
@@ -255,7 +261,7 @@ export default function ProductDetailClient({
 
         {/* Variations */}
         {variations.length > 0 && (
-          <div className="mt-6">
+          <div id="purchase-options" className="mt-6 scroll-mt-20">
             <p className="text-sm font-medium text-charcoal mb-2">
               {optionName}
               {selected && <span className="text-warm-gray font-normal">: {selected.label}</span>}
@@ -269,6 +275,7 @@ export default function ProductDetailClient({
                     key={v.id}
                     onClick={() => {
                       setVariationId(v.id)
+                      setQty(q => Math.min(q, Math.max(1, v.quantity)))
                       setError('')
                       // Jump the gallery to this colour's photo, if one is mapped.
                       const idx = colorToIndex.get(colorValue)
@@ -297,9 +304,9 @@ export default function ProductDetailClient({
             {product.personalizationInstructions && (
               <p className="text-xs text-warm-gray mt-1">{product.personalizationInstructions}</p>
             )}
-            <p className="text-xs text-warm-gray mt-1">
-              Add your details in the order notes, or message us after checkout.
-            </p>
+            <label htmlFor="personalization" className="block text-sm mt-3">Your personalization details <span className="text-warm-gray">(required)</span></label>
+            <textarea id="personalization" value={personalization} onChange={e => setPersonalization(e.target.value)} maxLength={500} rows={3} required className="w-full rounded-lg border border-taupe bg-white px-3 py-2 mt-1 text-sm" aria-describedby="personalization-help" />
+            <p id="personalization-help" className="text-xs text-warm-gray mt-1">{personalization.length}/500 characters. These details will appear in your cart and receipt.</p>
           </div>
         )}
 
@@ -318,6 +325,7 @@ export default function ProductDetailClient({
           </div>
         )}
 
+        <p className="text-xs text-warm-gray mt-4">No shipping charge added for website purchases. {processing ? `Processing: ${processing}. ` : 'Processing timing is confirmed after purchase. '}Any applicable tax appears at checkout.</p>
         <button
           onClick={handleAddToCart}
           disabled={soldOut}
@@ -325,7 +333,7 @@ export default function ProductDetailClient({
         >
           {soldOut ? 'Sold out' : added ? 'Added to cart ✓' : `Add ${qty > 1 ? `${qty} ` : ''}to Cart`}
         </button>
-        {error && <p className="text-sm text-red-600 mt-2">{error}</p>}
+        {error && <p role="alert" className="text-sm text-red-600 mt-2">{error}</p>}
 
         {soldOut && <BackInStockForm productId={product.id} />}
 
@@ -336,7 +344,7 @@ export default function ProductDetailClient({
             <dl className="space-y-2 text-sm">
               {product.shippingCost != null && (
                 <div className="flex justify-between">
-                  <dt className="text-warm-gray">Cost</dt>
+                  <dt className="text-warm-gray">Etsy shipping rate</dt>
                   <dd className="text-charcoal font-medium">
                     {product.shippingCost === 0 ? 'Free' : `$${product.shippingCost.toFixed(2)}`}
                   </dd>
@@ -439,6 +447,10 @@ export default function ProductDetailClient({
         )}
       </div>
 
+      <div className="fixed bottom-0 inset-x-0 z-40 lg:hidden bg-cream border-t border-taupe/40 px-4 pt-3 pb-[max(12px,env(safe-area-inset-bottom))] shadow-lg flex items-center gap-4">
+        <div className="shrink-0"><p className="font-display text-xl">${price.toFixed(2)}</p><p className="text-xs text-warm-gray">{qty} item{qty === 1 ? '' : 's'}</p></div>
+        <button onClick={handleAddToCart} disabled={soldOut} className="btn-primary flex-1 disabled:opacity-40">{soldOut ? 'Sold out' : added ? 'Added ✓' : needsChoice ? 'Choose an option' : 'Add to Cart'}</button>
+      </div>
       {/* Lightbox */}
       {zoomed && gallery.length > 0 && (
         <div

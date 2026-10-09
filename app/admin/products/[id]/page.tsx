@@ -9,7 +9,7 @@ import ColorImageMapper from './ColorImageMapper'
 export const dynamic = 'force-dynamic'
 
 // Website orders only count as sales once they're actually paid.
-const PAID_STATUSES = ['paid', 'shipped', 'delivered']
+const PAID_STATUSES = ['paid', 'printing', 'shipped', 'delivered']
 
 export default async function AdminProductDashboard({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

@@ -1,3 +1,5 @@
+import { createEtsyAuthedReader } from '@/lib/etsy-oauth'
+import { trackSync } from '@/lib/integration-health'
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
@@ -99,7 +101,7 @@ async function notifyBackInStock(productId: string, productName: string): Promis
 async function runSync(): Promise<SyncResult> {
   const shopId = await resolveShopId(etsyShopName())
   const listings = await fetchActiveListings(shopId)
-  const details = await fetchListingDetails(listings.map((l) => l.listing_id))
+  const details = await fetchListingDetails(listings.map((l) => l.listing_id), undefined, createEtsyAuthedReader())
 
   const seen: string[] = []
   const warnings: string[] = []
@@ -115,8 +117,10 @@ async function runSync(): Promise<SyncResult> {
     if (gallery === null) warnings.push(`Listing ${etsyListingId}: image details incomplete; saved gallery retained.`)
     const shipping = shippingSummary(listing, detail)
     const existing = await prisma.product.findUnique({ where: { etsyListingId } })
+    const shippingComplete = detail?.shipping_profile !== undefined
+    if (!shippingComplete) warnings.push(`Listing ${etsyListingId}: shipping details unavailable; saved shipping retained. Reconnect Etsy to grant the required read permissions.`)
     const variations = parseVariations(detail)
-    if (variations === null) warnings.push(`Listing ${etsyListingId}: inventory incomplete; saved options retained.`)
+    if (variations === null) warnings.push(`Listing ${etsyListingId}: inventory incomplete; saved options retained. Reconnect Etsy to grant inventory read permission.`)
 
     const data = {
       name: listing.title,
@@ -126,15 +130,16 @@ async function runSync(): Promise<SyncResult> {
       // Missing image data must not erase an existing thumbnail.
       ...(gallery?.[0]?.url ? { imageUrl: gallery[0].url } : {}),
       // Etsy's "active" listings can still be sold out.
+      quantity: listing.quantity,
       inStock: listing.quantity > 0 && (existing !== null || variations !== null),
       etsyUrl: listing.url,
       etsySyncedAt: new Date(),
-      processingMin: shipping.processingMin,
-      processingMax: shipping.processingMax,
-      shipsFrom: shipping.shipsFrom,
-      shippingCost: shipping.shippingCost,
-      shippingMinDays: shipping.shippingMinDays,
-      shippingMaxDays: shipping.shippingMaxDays,
+      processingMin: shippingComplete ? shipping.processingMin : (existing?.processingMin ?? shipping.processingMin),
+      processingMax: shippingComplete ? shipping.processingMax : (existing?.processingMax ?? shipping.processingMax),
+      shipsFrom: shippingComplete ? shipping.shipsFrom : (existing?.shipsFrom ?? shipping.shipsFrom),
+      shippingCost: shippingComplete ? shipping.shippingCost : (existing?.shippingCost ?? shipping.shippingCost),
+      shippingMinDays: shippingComplete ? shipping.shippingMinDays : (existing?.shippingMinDays ?? shipping.shippingMinDays),
+      shippingMaxDays: shippingComplete ? shipping.shippingMaxDays : (existing?.shippingMaxDays ?? shipping.shippingMaxDays),
       tags: listing.tags ?? [],
       materials: listing.materials ?? [],
       whoMade: listing.who_made ?? null,
@@ -232,7 +237,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    return NextResponse.json({ ok: true, ...(await runSync()) })
+    return NextResponse.json({ ok: true, ...(await trackSync('etsy-products', runSync)) })
   } catch (e) {
     return failure(e)
   }
@@ -245,7 +250,7 @@ export async function POST() {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
   try {
-    return NextResponse.json({ ok: true, ...(await runSync()) })
+    return NextResponse.json({ ok: true, ...(await trackSync('etsy-products', runSync)) })
   } catch (e) {
     return failure(e)
   }

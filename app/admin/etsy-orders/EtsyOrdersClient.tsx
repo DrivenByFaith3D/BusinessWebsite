@@ -54,17 +54,19 @@ function estimateEtsyFees(grandTotal: number | null, itemCount: number): number 
 
 export default function EtsyOrdersClient({
   connected,
+  focusReceipt,
   initialOrders,
   unshipped,
 }: {
   connected: boolean
+  focusReceipt?: string
   initialOrders: EtsyOrderView[]
   unshipped: number
 }) {
   const router = useRouter()
   const [syncing, setSyncing] = useState(false)
   const [message, setMessage] = useState('')
-  const [tab, setTab] = useState<'unshipped' | 'shipped'>('unshipped')
+  const [tab, setTab] = useState<'unshipped' | 'shipped'>(initialOrders.find(o => o.receiptId === focusReceipt)?.isShipped ? 'shipped' : 'unshipped')
   const [shipping, setShipping] = useState<EtsyOrderView | null>(null)
 
   async function syncOrders() {
@@ -76,7 +78,7 @@ export default function EtsyOrdersClient({
       if (!res.ok) {
         setMessage(data.error || 'Sync failed.')
       } else {
-        setMessage(`Synced ${data.orders} order${data.orders === 1 ? '' : 's'}.`)
+        setMessage(`${data.partial ? 'Partial sync — fee details unavailable. ' : ''}Synced ${data.orders} order${data.orders === 1 ? '' : 's'}.`)
         router.refresh()
       }
     } catch {
@@ -96,11 +98,12 @@ export default function EtsyOrdersClient({
     )
   }
 
-  const shown = initialOrders.filter((o) => (tab === 'unshipped' ? !o.isShipped : o.isShipped))
+  const shown = initialOrders.filter((o) => (tab === 'unshipped' ? !o.isShipped : o.isShipped) && (!focusReceipt || o.receiptId === focusReceipt))
   const money = (n: number | null, cur: string | null) => (n == null ? '-' : `$${n.toFixed(2)}${cur && cur !== 'USD' ? ` ${cur}` : ''}`)
 
   return (
     <div>
+      {focusReceipt && <p className="text-sm mb-4">Showing receipt {focusReceipt}. <Link href="/admin/etsy-orders" className="underline">View all Etsy orders</Link></p>}
       {/* Toolbar */}
       <div className="flex items-center justify-between gap-3 mb-4">
         <div className="flex items-center gap-1">

@@ -1,0 +1,22 @@
+BEGIN;
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "quantity" INTEGER, ADD COLUMN IF NOT EXISTS "websiteSold" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "ProductVariation" ADD COLUMN IF NOT EXISTS "websiteSold" INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE "ShopOrder" ADD COLUMN IF NOT EXISTS "confirmationToken" TEXT,
+ ADD COLUMN IF NOT EXISTS "checkoutKey" TEXT, ADD COLUMN IF NOT EXISTS "checkoutFingerprint" TEXT,
+ ADD COLUMN IF NOT EXISTS "expiresAt" TIMESTAMP(3), ADD COLUMN IF NOT EXISTS "shippingAddress" JSONB,
+ ADD COLUMN IF NOT EXISTS "amountPaid" DOUBLE PRECISION, ADD COLUMN IF NOT EXISTS "shippingCharged" DOUBLE PRECISION,
+ ADD COLUMN IF NOT EXISTS "trackingNumber" TEXT, ADD COLUMN IF NOT EXISTS "carrier" TEXT,
+ ADD COLUMN IF NOT EXISTS "trackingUrl" TEXT, ADD COLUMN IF NOT EXISTS "shippedAt" TIMESTAMP(3);
+CREATE UNIQUE INDEX IF NOT EXISTS "ShopOrder_confirmationToken_key" ON "ShopOrder"("confirmationToken");
+CREATE UNIQUE INDEX IF NOT EXISTS "ShopOrder_checkoutKey_key" ON "ShopOrder"("checkoutKey");
+ALTER TABLE "ShopOrderItem" ADD COLUMN IF NOT EXISTS "variationId" TEXT,
+ ADD COLUMN IF NOT EXISTS "inventoryKey" TEXT, ADD COLUMN IF NOT EXISTS "personalization" TEXT,
+ ADD COLUMN IF NOT EXISTS "cartKey" TEXT;
+CREATE INDEX IF NOT EXISTS "ShopOrder_status_expiresAt_idx" ON "ShopOrder"("status", "expiresAt");
+CREATE INDEX IF NOT EXISTS "ShopOrderItem_productId_inventoryKey_idx" ON "ShopOrderItem"("productId", "inventoryKey");
+CREATE TABLE IF NOT EXISTS "StripeEvent" ("id" TEXT PRIMARY KEY, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS "IntegrationSync" ("key" TEXT PRIMARY KEY, "status" TEXT NOT NULL,
+ "lastAttemptAt" TIMESTAMP(3) NOT NULL, "lastSuccessAt" TIMESTAMP(3), "message" TEXT, "updatedAt" TIMESTAMP(3) NOT NULL);
+ALTER TABLE "StripeEvent" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "IntegrationSync" ENABLE ROW LEVEL SECURITY;
+COMMIT;

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { prisma } from '@/lib/prisma'
 import { requireAuth } from '@/lib/api'
+import { applyCheckoutSession } from '@/lib/shop-payments'
 import { formatOrderId } from '@/lib/constants'
 
 function getStripe() {
@@ -30,6 +31,15 @@ export async function POST(req: NextRequest) {
 
   try {
     const stripe = getStripe()
+    if (order.stripeSessionId) {
+      const existing = await stripe.checkout.sessions.retrieve(order.stripeSessionId)
+      if (existing.payment_status === 'paid') {
+        await applyCheckoutSession(existing)
+        return NextResponse.json({ url: `${appUrl}/orders/${orderId}/payment-success` })
+      }
+      if (existing.status === 'open' && existing.amount_subtotal === unitAmount && existing.url) return NextResponse.json({ url: existing.url })
+      if (existing.status === 'open') await stripe.checkout.sessions.expire(existing.id)
+    }
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -70,7 +80,7 @@ export async function POST(req: NextRequest) {
       success_url: `${appUrl}/orders/${orderId}/payment-success`,
       cancel_url: `${appUrl}/orders/${orderId}/payment-cancel`,
       metadata: { orderId, kind: 'full' },
-    })
+    }, { idempotencyKey: `custom-checkout-${order.id}-${order.stripeSessionId ?? 'first'}-${unitAmount}` })
 
     await prisma.order.update({
       where: { id: orderId },

@@ -1,8 +1,6 @@
-// Read-only Etsy client for syncing the shop's public active listings.
-//
-// This deliberately uses Etsy's public application endpoints, which authenticate
-// with the keystring alone (x-api-key). No OAuth, no stored tokens, nothing to
-// expire or reconnect. That is all we need to mirror listings one way.
+// Etsy public listing metadata and separately authorized inventory/shipping reads.
+// Inventory/Shipping includes were retired in July 2026; scoped batch endpoints
+// are passed in by the sync route so public metadata can still refresh separately.
 
 const ETSY_API = 'https://openapi.etsy.com/v3/application'
 
@@ -274,24 +272,30 @@ export function listingPrice(listing: EtsyListing): number {
 // whole sync, since the core listing data is already in hand.
 export async function fetchListingDetails(
   listingIds: number[],
-  includes = 'Images,Shipping,Inventory,Videos',
+  includes = 'Images,Videos,Personalization',
+  privateGet?: (path: string) => Promise<{ results: EtsyListing[] }>,
 ): Promise<Map<number, EtsyListing>> {
   const details = new Map<number, EtsyListing>()
-
   for (let i = 0; i < listingIds.length; i += 100) {
-    const chunk = listingIds.slice(i, i + 100)
-    try {
-      const data = await etsyGet<{ results: EtsyListing[] }>(
-        `/listings/batch?listing_ids=${chunk.join(',')}&includes=${includes}`,
-      )
-      for (const listing of data.results ?? []) {
-        details.set(listing.listing_id, listing)
+    const ids = listingIds.slice(i, i + 100).join(',')
+    const tasks = [etsyGet<{ results: EtsyListing[] }>(`/listings/batch?listing_ids=${ids}&includes=${includes}`)]
+    if (privateGet) tasks.push(
+      privateGet(`/listings/batch/inventory?listing_ids=${ids}`),
+      privateGet(`/listings/batch/shipping?listing_ids=${ids}`),
+    )
+    const results = await Promise.allSettled(tasks)
+    for (const [index, result] of results.entries()) {
+      if (result.status === 'rejected') { console.error(`ETSY_DETAIL_ERR ${['metadata', 'inventory', 'shipping'][index]} ::`, result.reason instanceof Error ? result.reason.message : 'Request failed'); continue }
+      for (const listing of result.value.results ?? []) {
+        if (!Number.isSafeInteger(listing.listing_id)) continue
+        const previous = details.get(listing.listing_id) ?? { listing_id: listing.listing_id }
+        // Merge only each endpoint's own fields: a sparse inventory response
+        // must not erase the gallery or metadata returned by the public request.
+        const fields = index === 1 ? { inventory: listing.inventory } : index === 2 ? { shipping_profile: listing.shipping_profile } : listing
+        details.set(listing.listing_id, { ...previous, ...fields } as EtsyListing)
       }
-    } catch (e) {
-      console.error('ETSY_DETAIL_ERR ::', e instanceof Error ? e.message : String(e))
     }
   }
-
   return details
 }
 
