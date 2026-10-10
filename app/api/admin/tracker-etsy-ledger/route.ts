@@ -79,6 +79,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ shop_id: shopId, min_created: min, max_created: max, entries: [...entries.values()],
       receipts: receipts.map(row => ({ ...pick(row, ['receipt_id', 'grandtotal', 'subtotal', 'total_shipping_cost', 'total_tax_cost', 'total_vat_cost', 'is_paid', 'is_shipped', 'status', 'created_timestamp', 'create_timestamp', 'refunds']),
         titles: Array.isArray(row.transactions) ? row.transactions.map((t: Record<string, unknown>) => t.title).filter(Boolean) : [],
+        transactions: Array.isArray(row.transactions) ? row.transactions.map((t:Record<string,unknown>) => pick(t,['transaction_id','listing_id','quantity'])) : [],
+        shipments: Array.isArray(row.shipments) ? row.shipments.map((s:Record<string,unknown>) => pick(s,['receipt_shipping_id','shipping_label_cost','shipping_label_currency','shipped_timestamp'])) : [],
       })),
       payments: payments.map(row => pick(row, ['payment_id', 'receipt_id', 'amount_gross', 'amount_fees', 'posted_fees', 'adjusted_fees', 'currency', 'created_timestamp', 'create_timestamp', 'updated_timestamp', 'payment_adjustments'])),
     }, {
