@@ -1,0 +1,1 @@
+ALTER TABLE "Product" ADD COLUMN IF NOT EXISTS "listingState" TEXT NOT NULL DEFAULT 'active';

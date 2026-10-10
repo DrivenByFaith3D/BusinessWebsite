@@ -34,6 +34,7 @@ export default async function AdminProductsPage() {
       price: p.price,
       imageUrl: productThumbnail(p),
       inStock: p.inStock,
+      listingState: p.listingState,
       isEtsy: p.etsyListingId != null,
       imageCount: p._count.images,
       variationLabels: p.variations.map(v => v.label),

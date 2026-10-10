@@ -5,6 +5,7 @@ import { requireAdmin } from '@/lib/api'
 
 export async function GET() {
   const products = await prisma.product.findMany({
+    where: { listingState: 'active' },
     orderBy: { createdAt: 'desc' },
     include: { images: { orderBy: { rank: 'asc' }, take: 1, select: { url: true } } },
   })

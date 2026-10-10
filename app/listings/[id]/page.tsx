@@ -23,7 +23,7 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
     },
   })
 
-  if (!product) notFound()
+  if (!product || product.listingState !== 'active') notFound()
 
   // Site reviews and Etsy reviews both count toward the rating shown: a buyer
   // does not care which system a review came from.

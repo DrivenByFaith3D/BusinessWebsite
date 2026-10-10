@@ -239,24 +239,32 @@ export async function resolveShopId(shopName: string): Promise<number> {
   return shop.shop_id
 }
 
-// Etsy pages at 100 max; walk until exhausted so a big shop isn't silently cut off.
-export async function fetchActiveListings(shopId: number): Promise<EtsyListing[]> {
+// Exhaust every page before callers can hide listings that disappeared.
+export async function fetchShopListings(
+  shopId: number,
+  state: 'active' | 'draft',
+  read: <T>(path: string) => Promise<T> = etsyGet,
+): Promise<EtsyListing[]> {
   const all: EtsyListing[] = []
-  const limit = 100
   let offset = 0
-
   for (;;) {
-    const page = await etsyGet<{ count: number; results: EtsyListing[] }>(
-      `/shops/${shopId}/listings/active?limit=${limit}&offset=${offset}`,
-    )
-    const results = page.results ?? []
-    all.push(...results)
-    offset += results.length
-    if (results.length < limit || offset >= (page.count ?? 0)) break
-    if (offset > 5000) break // hard stop; no shop here is that big
+    const path = state === 'active'
+      ? `/shops/${shopId}/listings/active?limit=100&offset=${offset}`
+      : `/shops/${shopId}/listings?state=draft&limit=100&offset=${offset}`
+    const page = await read<{ count: number; results: EtsyListing[] }>(path)
+    if (!Array.isArray(page.results) || !Number.isSafeInteger(page.count) || page.count < 0 ||
+        page.results.some(l => !Number.isSafeInteger(l.listing_id) ||
+          (l.state !== state && !(state === 'draft' && l.state === 'edit'))))
+      throw new Error(`Etsy ${state} listings response was incomplete or had an unexpected state`)
+    all.push(...page.results)
+    offset += page.results.length
+    if (offset >= page.count) return all
+    if (!page.results.length || offset >= 10000)
+      throw new Error(`Etsy ${state} listings pagination was incomplete`)
   }
-
-  return all
+}
+export async function fetchActiveListings(shopId: number): Promise<EtsyListing[]> {
+  return fetchShopListings(shopId, 'active')
 }
 
 // Etsy sends money as an integer plus a divisor (e.g. 1250 / 100 = 12.50).
@@ -274,11 +282,12 @@ export async function fetchListingDetails(
   listingIds: number[],
   includes = 'Images,Videos,Personalization',
   privateGet?: (path: string) => Promise<{ results: EtsyListing[] }>,
+  metadataGet: (path: string) => Promise<{ results: EtsyListing[] }> = etsyGet,
 ): Promise<Map<number, EtsyListing>> {
   const details = new Map<number, EtsyListing>()
   for (let i = 0; i < listingIds.length; i += 100) {
     const ids = listingIds.slice(i, i + 100).join(',')
-    const tasks = [etsyGet<{ results: EtsyListing[] }>(`/listings/batch?listing_ids=${ids}&includes=${includes}`)]
+    const tasks = [metadataGet(`/listings/batch?listing_ids=${ids}&includes=${includes}`)]
     if (privateGet) tasks.push(
       privateGet(`/listings/batch/inventory?listing_ids=${ids}`),
       privateGet(`/listings/batch/shipping?listing_ids=${ids}`),
@@ -333,9 +342,10 @@ export function orderedImages(
 export async function fetchVariationImages(
   shopId: number,
   listingId: number,
+  read: <T>(path: string) => Promise<T> = etsyGet,
 ): Promise<{ value: string; etsyImageId: string }[]> {
   try {
-    const data = await etsyGet<{ results: { value: string; image_id: number }[] }>(
+    const data = await read<{ results: { value: string; image_id: number }[] }>(
       `/shops/${shopId}/listings/${listingId}/variation-images`,
     )
     return (data.results ?? [])

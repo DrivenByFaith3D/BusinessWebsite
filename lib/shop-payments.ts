@@ -50,7 +50,7 @@ export async function applyCheckoutSession(
           for (const item of order.items) {
             if (!item.productId) continue
             // SQL clamps stale external stock to zero instead of allowing negative inventory.
-            await tx.$executeRaw`UPDATE "Product" SET "websiteSold" = "websiteSold" + ${item.quantity}, "quantity" = CASE WHEN "quantity" IS NULL THEN NULL ELSE GREATEST(0, "quantity" - ${item.quantity}) END, "inStock" = CASE WHEN "quantity" IS NULL THEN "inStock" ELSE "quantity" > ${item.quantity} END WHERE "id" = ${item.productId}`
+            await tx.$executeRaw`UPDATE "Product" SET "websiteSold" = "websiteSold" + ${item.quantity}, "quantity" = CASE WHEN "quantity" IS NULL THEN NULL ELSE GREATEST(0, "quantity" - ${item.quantity}) END, "inStock" = CASE WHEN "quantity" IS NULL THEN "inStock" ELSE "listingState" = 'active' AND "quantity" > ${item.quantity} END WHERE "id" = ${item.productId}`
             if (item.inventoryKey?.startsWith('etsy:')) {
               const etsyId = item.inventoryKey.slice(5)
               await tx.$executeRaw`UPDATE "ProductVariation" SET "websiteSold" = "websiteSold" + ${item.quantity}, "quantity" = GREATEST(0, "quantity" - ${item.quantity}) WHERE "productId" = ${item.productId} AND "etsyProductId" = ${etsyId}`

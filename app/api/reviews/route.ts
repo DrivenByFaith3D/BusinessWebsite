@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   if (!productId) return NextResponse.json({ error: 'Missing productId' }, { status: 400 })
 
   const reviews = await prisma.review.findMany({
-    where: { productId },
+    where: { productId, product: { listingState: 'active' } },
     orderBy: { createdAt: 'desc' },
     include: { user: { select: { name: true } } },
   })
@@ -31,6 +31,9 @@ export async function POST(req: NextRequest) {
   if (!productId || !rating || rating < 1 || rating > 5) {
     return NextResponse.json({ error: 'Invalid input' }, { status: 400 })
   }
+
+  const product = await prisma.product.findFirst({ where: { id: productId, listingState: 'active' }, select: { id: true } })
+  if (!product) return NextResponse.json({ error: 'Item not found.' }, { status: 404 })
 
   // Verified buyer: this account has a paid shop order containing this product.
   const purchased = await prisma.shopOrderItem.findFirst({

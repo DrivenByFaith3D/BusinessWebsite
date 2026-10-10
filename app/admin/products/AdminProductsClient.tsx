@@ -21,6 +21,7 @@ interface Product {
   price: number
   imageUrl: string | null
   inStock: boolean
+  listingState: string
   isEtsy: boolean
   imageCount: number
   variationLabels: string[]
@@ -37,6 +38,8 @@ export default function AdminProductsClient({
   etsyConnected: boolean
   etsyNeedsReconnect: boolean
 }) {
+  const [filter, setFilter] = useState('all')
+  const visibleProducts = initialProducts.filter(p => filter === 'all' || p.listingState === filter)
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState('')
 
@@ -59,7 +62,7 @@ export default function AdminProductsClient({
         setSyncMessage(data.error || 'Sync failed.')
       } else {
         setSyncMessage(
-          `${data.partial ? 'Partial sync' : 'Synced'} ${data.total} listing${data.total === 1 ? '' : 's'}: ${data.created} new, ${data.updated} updated, ${data.deactivated} hidden.${data.partial ? ` ${data.warnings.join(' ')}` : ''}`,
+          `${data.partial ? 'Partial sync' : 'Synced'} ${data.total} listing${data.total === 1 ? '' : 's'}: ${data.created} new, ${data.updated} updated, ${data.deactivated} hidden, ${data.drafts ?? 0} drafts.${data.partial ? ` ${data.warnings.join(' ')}` : ''}`,
         )
         // Reload so the catalog reflects what the sync just wrote.
         router.refresh()
@@ -123,7 +126,7 @@ export default function AdminProductsClient({
             onClick={syncEtsy}
             disabled={syncing}
             className="btn-secondary flex items-center gap-2 disabled:opacity-50"
-            title="Pull the latest active listings from Etsy"
+            title="Pull active listings and drafts from Etsy"
           >
             <svg className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
@@ -133,17 +136,25 @@ export default function AdminProductsClient({
         </div>
       </div>
 
-      {initialProducts.length === 0 ? (
+      <div className="flex flex-wrap gap-2 mb-5" aria-label="Filter products">
+        {[['all', 'All'], ['active', 'Published'], ['draft', 'Drafts'], ['inactive', 'Hidden']].map(([value, label]) => (
+          <button key={value} onClick={() => setFilter(value)} aria-pressed={filter === value}
+            className={filter === value ? 'btn-primary text-sm' : 'btn-secondary text-sm'}>
+            {label} ({initialProducts.filter(p => value === 'all' || p.listingState === value).length})
+          </button>
+        ))}
+      </div>
+      {visibleProducts.length === 0 ? (
         <div className="card p-12 text-center text-warm-gray">
           <svg className="w-12 h-12 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
           </svg>
-          <p className="text-charcoal font-medium">No products yet</p>
+          <p className="text-charcoal font-medium">{initialProducts.length ? 'No products in this view' : 'No products yet'}</p>
           <p className="text-sm mt-1">Add a listing on Etsy, then hit “Sync from Etsy”.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {initialProducts.map(product => (
+          {visibleProducts.map(product => (
             <Link
               key={product.id}
               href={`/admin/products/${product.id}`}
@@ -177,7 +188,7 @@ export default function AdminProductsClient({
 
                 <div className="flex items-center gap-2 flex-wrap mb-2">
                   <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${product.inStock ? 'bg-green-100 text-green-700' : 'bg-taupe/20 text-warm-gray'}`}>
-                    {product.inStock ? 'In stock' : 'Out of stock'}
+                    {product.listingState === 'draft' ? 'Draft' : product.listingState === 'inactive' ? 'Hidden' : product.inStock ? 'In stock' : 'Out of stock'}
                   </span>
                   {product.reviewCount > 0 && (
                     <span className="text-xs text-warm-gray">{product.avgRating.toFixed(1)} ★ ({product.reviewCount})</span>
