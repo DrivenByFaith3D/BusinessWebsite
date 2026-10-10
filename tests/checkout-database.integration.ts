@@ -447,7 +447,9 @@ test('full Etsy sync imports private drafts; a later denied draft read retains t
     } else if (url.pathname.includes('/listings/batch')) {
       const listing = url.searchParams.get('listing_ids') === '666' ? draftListing : activeListing
       if (listing.state === 'draft') { assert.equal(auth, 'Bearer isolated-token'); privateMetadata = true }
-      body = { results: [{ ...listing, images: [], inventory: null, shipping_profile: null }] }
+      const { has_variations: _flag, ...detail } = listing
+      void _flag
+      body = { results: [{ ...detail, images: [], inventory: null, shipping_profile: null }] }
     }
     return Response.json(body)
   }
@@ -456,7 +458,9 @@ test('full Etsy sync imports private drafts; a later denied draft read retains t
     const run = () => GET(new NextRequest('http://localhost/api/sync/etsy', { headers: { authorization: 'Bearer isolated-cron' } }))
     const first = await run()
     assert.equal(first.status, 200)
-    assert.equal((await first.json()).drafts, 1)
+    const firstResult = await first.json()
+    assert.equal(firstResult.drafts, 1)
+    assert.equal(firstResult.partial, false)
     const saved = await prisma.product.findUniqueOrThrow({ where: { etsyListingId: '666' } })
     assert.equal(saved.listingState, 'draft'); assert.equal(saved.inStock, false); assert.ok(privateMetadata)
     denyDrafts = true

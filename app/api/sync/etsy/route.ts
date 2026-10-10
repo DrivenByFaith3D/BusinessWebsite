@@ -139,8 +139,10 @@ async function runSync(): Promise<SyncResult> {
     const existing = await prisma.product.findUnique({ where: { etsyListingId } })
     const shippingComplete = detail?.shipping_profile !== undefined
     if (!shippingComplete) warnings.push(`Listing ${etsyListingId}: shipping details unavailable; saved shipping retained. Reconnect Etsy to grant the required read permissions.`)
-    const variations = parseVariations(detail)
-    if (variations === null) warnings.push(`Listing ${etsyListingId}: inventory incomplete; saved options retained. Reconnect Etsy to grant inventory read permission.`)
+    const variations = parseVariations(detail ? { ...listing, ...detail, has_variations: detail.has_variations ?? listing.has_variations } : undefined)
+    if (variations === null) warnings.push(listing.state === 'active'
+      ? `Listing ${etsyListingId}: inventory incomplete; saved options retained. Check Etsy permissions and retry.`
+      : `Draft ${etsyListingId}: inventory details not available yet; saved options retained.`)
 
     const data = {
       name: listing.title || 'Untitled Etsy draft',
