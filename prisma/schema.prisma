@@ -184,6 +184,7 @@ model Product {
   price       Float
   imageUrl    String?
   inStock     Boolean  @default(true)
+  listingState String @default("active") // active, draft, or inactive; independent of stock
   websiteSold Int      @default(0)
   quantity    Int? // null means made-to-order/unlimited; Etsy supplies a count
   createdAt   DateTime @default(now())

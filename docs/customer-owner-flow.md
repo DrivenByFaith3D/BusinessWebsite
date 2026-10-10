@@ -43,3 +43,15 @@ Do not use `prisma db push` against production. For a database behind a transact
 - Local authenticated HTTP checks cover the inbox filters, dashboard, paid purchase detail, private receipt, unauthorized access, tracking URL validation, fulfillment PATCH, and the customer's resulting tracking page.
 - A staged production build is verified using the business Vercel environment before changing the public domains. Production schema validation confirms the added columns, RLS, and unchanged existing record counts.
 - Browser screenshot/device interaction checks were unavailable in this session; responsive controls were checked in code and server-rendered markup. No real card charge is required for these checks.
+
+## Etsy drafts
+
+Product `listingState` is separate from inventory: `active`, `draft`, or `inactive`.
+The daily and manual product sync reads active listings and private Etsy drafts,
+including draft photos/options through OAuth. Drafts remain admin-only; the shop,
+public product API, direct product pages, checkout, reviews, and stock-alert signups
+exclude them. Admin Products provides Published, Drafts, and Hidden filters.
+Publishing on Etsy updates the same website product on the next successful sync.
+If the draft read fails or pagination is incomplete, saved drafts are retained and
+sync health reports a partial result. Apply the additive `scripts/etsy-drafts.sql`
+before deploying this version. No Etsy listings are published or edited by sync.

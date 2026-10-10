@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
       const requested = new Map<string, number>()
       const resolved = lines.map((line) => {
         const p = products.find((p) => p.id === line.productId)
-        if (!p || !p.inStock) throw new Error('An item is no longer available. Please update your cart.')
+        if (!p || p.listingState !== 'active' || !p.inStock) throw new Error('An item is no longer available. Please update your cart.')
         const v = line.variationId ? p.variations.find((v) => v.id === line.variationId) : null
         if ((line.variationId && !v) || (p.variations.length && !v))
           throw new Error(`Please reselect an option for ${p.name}; its options have changed.`)

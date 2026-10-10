@@ -403,3 +403,66 @@ test('a paid Stripe session with an unsaved ID is recovered and never resold', a
   assert.ok(recovered.paidAt)
   assert.equal((await prisma.product.findUniqueOrThrow({ where: { id: product.id } })).quantity, 0)
 })
+
+test('synced drafts stay private and unbuyable even if their stock flag is toggled', async () => {
+  const draft = await saveEtsyProduct(prisma, 'draft-test', false,
+    { name: 'Private draft print', price: 20, quantity: 5, inStock: false, listingState: 'draft' },
+    [{ url: 'https://i.etsystatic.com/draft.jpg', fullUrl: null, etsyImageId: 'draft-photo' }], [])
+  await prisma.product.update({ where: { id: draft.id }, data: { inStock: true } })
+  assert.equal((await checkout(draft.id, null, 1)).status, 409)
+  const { GET } = require('./app/api/products/route') as typeof import('../app/api/products/route')
+  assert.ok(!(await (await GET()).json()).some((p: { id: string }) => p.id === draft.id))
+  const published = await saveEtsyProduct(prisma, 'draft-test', true,
+    { name: 'Published print', price: 20, quantity: 5, inStock: true, listingState: 'active' }, null, null)
+  assert.equal(published.id, draft.id)
+  assert.equal((await checkout(published.id, null, 1)).status, 200)
+  const backToDraft = await saveEtsyProduct(prisma, 'draft-test', true,
+    { name: 'Private again', price: 20, quantity: 5, inStock: false, listingState: 'draft' }, null, null)
+  assert.equal(backToDraft.id, draft.id)
+  assert.equal((await prisma.productImage.count({ where: { productId: draft.id } })), 1)
+  assert.ok(!(await (await GET()).json()).some((p: { id: string }) => p.id === draft.id))
+})
+
+test('full Etsy sync imports private drafts; a later denied draft read retains them', async () => {
+  const originalFetch = globalThis.fetch
+  process.env.ETSY_KEYSTRING = 'isolated-key'
+  process.env.ETSY_SHARED_SECRET = 'isolated-secret'
+  process.env.ETSY_SHOP_NAME = 'IsolatedShop'
+  process.env.CRON_SECRET = 'isolated-cron'
+  await prisma.etsyToken.upsert({ where: { id: 'shop' }, create: { id: 'shop', shopId: '555', accessToken: 'isolated-token', refreshToken: 'isolated-refresh', expiresAt: new Date(Date.now() + 3600000) }, update: { shopId: '555', accessToken: 'isolated-token', expiresAt: new Date(Date.now() + 3600000) } })
+  const draftListing = { listing_id: 666, state: 'draft', title: 'Etsy private draft', description: 'Not published', quantity: 8, price: { amount: 1500, divisor: 100 }, has_variations: false }
+  const activeListing = { ...draftListing, listing_id: 667, state: 'active', title: 'Etsy public print' }
+  let denyDrafts = false
+  let privateMetadata = false
+  globalThis.fetch = async (input, init) => {
+    const url = new URL(String(input))
+    const auth = new Headers(init?.headers).get('authorization')
+    let body: unknown = { count: 0, results: [] }
+    if (url.pathname.endsWith('/shops')) body = { results: [{ shop_id: 555, shop_name: 'IsolatedShop' }] }
+    else if (url.pathname.endsWith('/listings/active')) body = { count: 1, results: [activeListing] }
+    else if (url.searchParams.get('state') === 'draft') {
+      assert.equal(auth, 'Bearer isolated-token')
+      if (denyDrafts) return Response.json({ error: 'denied' }, { status: 403 })
+      body = { count: 2, results: [draftListing, { ...activeListing, state: 'edit' }] }
+    } else if (url.pathname.includes('/listings/batch')) {
+      const listing = url.searchParams.get('listing_ids') === '666' ? draftListing : activeListing
+      if (listing.state === 'draft') { assert.equal(auth, 'Bearer isolated-token'); privateMetadata = true }
+      body = { results: [{ ...listing, images: [], inventory: null, shipping_profile: null }] }
+    }
+    return Response.json(body)
+  }
+  try {
+    const { GET } = require('./app/api/sync/etsy/route') as typeof import('../app/api/sync/etsy/route')
+    const run = () => GET(new NextRequest('http://localhost/api/sync/etsy', { headers: { authorization: 'Bearer isolated-cron' } }))
+    const first = await run()
+    assert.equal(first.status, 200)
+    assert.equal((await first.json()).drafts, 1)
+    const saved = await prisma.product.findUniqueOrThrow({ where: { etsyListingId: '666' } })
+    assert.equal(saved.listingState, 'draft'); assert.equal(saved.inStock, false); assert.ok(privateMetadata)
+    denyDrafts = true
+    const second = await run()
+    assert.equal(second.status, 200); assert.equal((await second.json()).partial, true)
+    const retained = await prisma.product.findUniqueOrThrow({ where: { id: saved.id } })
+    assert.equal(retained.listingState, 'draft'); assert.equal(retained.name, saved.name)
+  } finally { globalThis.fetch = originalFetch }
+})

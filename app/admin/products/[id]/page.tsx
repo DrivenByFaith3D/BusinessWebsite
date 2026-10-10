@@ -141,15 +141,18 @@ export default async function AdminProductDashboard({ params }: { params: Promis
           <p className="text-lg font-display text-charcoal mt-1">{money(product.price)}</p>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${product.inStock ? 'bg-green-100 text-green-700' : 'bg-taupe/20 text-warm-gray'}`}>
-              {product.inStock ? 'In stock' : 'Out of stock'}
+              {product.listingState === 'draft' ? 'Draft · hidden from shop' : product.listingState === 'inactive' ? 'Hidden from shop' : product.inStock ? 'In stock' : 'Out of stock'}
             </span>
             {product.etsyListingId && <span className="text-[10px] text-warm-gray/70">from Etsy</span>}
           </div>
           <div className="mt-4 flex items-center gap-3 flex-wrap">
+            {product.listingState === 'active' && (
             <Link href={`/listings/${product.id}`} className="btn-primary text-sm inline-flex items-center gap-1.5">
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
               View retail page
             </Link>
+            )}
+            {product.listingState === 'draft' && <p className="text-sm text-warm-gray">Publish this listing on Etsy, then sync to make it available in your shop.</p>}
             <span className="text-xs text-warm-gray">See this item as a customer does</span>
           </div>
         </div>

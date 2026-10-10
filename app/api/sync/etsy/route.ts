@@ -10,6 +10,7 @@ import {
   EtsyNotConfiguredError,
   etsyShopName,
   fetchActiveListings,
+  fetchShopListings,
   fetchListingDetails,
   fetchVariationImages,
   listingPrice,
@@ -21,13 +22,14 @@ import {
 } from '@/lib/etsy'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 interface SyncResult {
   created: number
   updated: number
   deactivated: number
   total: number
+  drafts: number
   reviews: number
   partial: boolean
   warnings: string[]
@@ -100,11 +102,29 @@ async function notifyBackInStock(productId: string, productName: string): Promis
 
 async function runSync(): Promise<SyncResult> {
   const shopId = await resolveShopId(etsyShopName())
-  const listings = await fetchActiveListings(shopId)
-  const details = await fetchListingDetails(listings.map((l) => l.listing_id), undefined, createEtsyAuthedReader())
-
-  const seen: string[] = []
+  const reader = createEtsyAuthedReader()
+  const active = await fetchActiveListings(shopId)
   const warnings: string[] = []
+  let drafts: typeof active = []
+  let draftsComplete = false
+  try {
+    drafts = await fetchShopListings(shopId, 'draft', reader)
+    draftsComplete = true
+  } catch {
+    warnings.push('Draft listings could not be read. Saved drafts were retained; reconnect Etsy with listing read permission, then retry.')
+  }
+  const activeIds = new Set(active.map(l => l.listing_id))
+  // Etsy can include pending edits of an active listing in the draft response.
+  // Keep the published version authoritative until Etsy actually changes state.
+  drafts = drafts.filter(l => !activeIds.has(l.listing_id))
+  // Draft metadata is private, so it must use the seller's OAuth grant too.
+  const [activeDetails, draftDetails] = await Promise.all([
+    fetchListingDetails(active.map(l => l.listing_id), undefined, reader),
+    fetchListingDetails(drafts.map(l => l.listing_id), undefined, reader, reader),
+  ])
+  const details = new Map([...activeDetails, ...draftDetails])
+  const listings = [...active, ...drafts]
+  const seen: string[] = []
   let created = 0
   let updated = 0
 
@@ -123,7 +143,8 @@ async function runSync(): Promise<SyncResult> {
     if (variations === null) warnings.push(`Listing ${etsyListingId}: inventory incomplete; saved options retained. Reconnect Etsy to grant inventory read permission.`)
 
     const data = {
-      name: listing.title,
+      name: listing.title || 'Untitled Etsy draft',
+      listingState: listing.state === 'active' ? 'active' : 'draft',
       description: listing.description,
       price: listingPrice(listing),
       // Primary thumbnail; the grid and cart already read this field.
@@ -131,7 +152,7 @@ async function runSync(): Promise<SyncResult> {
       ...(gallery?.[0]?.url ? { imageUrl: gallery[0].url } : {}),
       // Etsy's "active" listings can still be sold out.
       quantity: listing.quantity,
-      inStock: listing.quantity > 0 && (existing !== null || variations !== null),
+      inStock: listing.state === 'active' && listing.quantity > 0 && (existing !== null || variations !== null),
       etsyUrl: listing.url,
       etsySyncedAt: new Date(),
       processingMin: shippingComplete ? shipping.processingMin : (existing?.processingMin ?? shipping.processingMin),
@@ -174,7 +195,7 @@ async function runSync(): Promise<SyncResult> {
     // Colour photos: if the seller assigned per-colour images on Etsy, mirror them
     // (source=etsy). Admin-set mappings (source=admin) are left untouched.
     try {
-      const variationImages = await fetchVariationImages(shopId, listing.listing_id)
+      const variationImages = await fetchVariationImages(shopId, listing.listing_id, listing.state === 'active' ? undefined : reader)
       for (const vi of variationImages) {
         const current = await prisma.productColorImage.findUnique({
           where: { productId_value: { productId: product.id, value: vi.value } },
@@ -193,15 +214,16 @@ async function runSync(): Promise<SyncResult> {
     }
   }
 
-  // Anything previously pulled from Etsy that is no longer active gets hidden
+  // Listings absent from a complete active/draft snapshot get hidden
   // rather than deleted, so past orders and reviews keep their product.
   // Hand-made products (etsyListingId null) are never touched.
   const { count: deactivated } = await prisma.product.updateMany({
     where: {
       etsyListingId: { not: null, notIn: seen },
-      inStock: true,
+      ...(draftsComplete ? {} : { listingState: { not: 'draft' } }),
+      OR: [{ inStock: true }, { listingState: { not: 'inactive' } }],
     },
-    data: { inStock: false },
+    data: { inStock: false, listingState: 'inactive' },
   })
 
   // After products exist, so reviews can be matched to them by listing id.
@@ -214,7 +236,7 @@ async function runSync(): Promise<SyncResult> {
     console.error('Etsy review sync failed:', e instanceof Error ? e.message : e)
   }
 
-  return { created, updated, deactivated, total: listings.length, reviews, partial: warnings.length > 0, warnings }
+  return { created, updated, deactivated, total: listings.length, drafts: drafts.length, reviews, partial: warnings.length > 0, warnings }
 }
 
 function failure(e: unknown) {

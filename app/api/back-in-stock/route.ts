@@ -15,8 +15,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'A valid email is required.' }, { status: 400 })
   }
 
-  const product = await prisma.product.findUnique({ where: { id: productId }, select: { inStock: true } })
-  if (!product) return NextResponse.json({ error: 'Item not found.' }, { status: 404 })
+  const product = await prisma.product.findUnique({ where: { id: productId }, select: { inStock: true, listingState: true } })
+  if (!product || product.listingState !== 'active') return NextResponse.json({ error: 'Item not found.' }, { status: 404 })
   if (product.inStock) return NextResponse.json({ error: "This item is in stock — you can order it now." }, { status: 400 })
 
   // Re-subscribing (notifiedAt reset to null) is fine: they want the next alert.
