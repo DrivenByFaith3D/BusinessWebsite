@@ -443,7 +443,7 @@ test('full Etsy sync imports private drafts; a later denied draft read retains t
     else if (url.searchParams.get('state') === 'draft') {
       assert.equal(auth, 'Bearer isolated-token')
       if (denyDrafts) return Response.json({ error: 'denied' }, { status: 403 })
-      body = { count: 1, results: [draftListing] }
+      body = { count: 2, results: [draftListing, { ...activeListing, state: 'edit' }] }
     } else if (url.pathname.includes('/listings/batch')) {
       const listing = url.searchParams.get('listing_ids') === '666' ? draftListing : activeListing
       if (listing.state === 'draft') { assert.equal(auth, 'Bearer isolated-token'); privateMetadata = true }

@@ -113,14 +113,17 @@ async function runSync(): Promise<SyncResult> {
   } catch {
     warnings.push('Draft listings could not be read. Saved drafts were retained; reconnect Etsy with listing read permission, then retry.')
   }
+  const activeIds = new Set(active.map(l => l.listing_id))
+  // Etsy can include pending edits of an active listing in the draft response.
+  // Keep the published version authoritative until Etsy actually changes state.
+  drafts = drafts.filter(l => !activeIds.has(l.listing_id))
   // Draft metadata is private, so it must use the seller's OAuth grant too.
   const [activeDetails, draftDetails] = await Promise.all([
     fetchListingDetails(active.map(l => l.listing_id), undefined, reader),
     fetchListingDetails(drafts.map(l => l.listing_id), undefined, reader, reader),
   ])
   const details = new Map([...activeDetails, ...draftDetails])
-  const activeIds = new Set(active.map(l => l.listing_id))
-  const listings = [...active, ...drafts.filter(l => !activeIds.has(l.listing_id))]
+  const listings = [...active, ...drafts]
   const seen: string[] = []
   let created = 0
   let updated = 0
