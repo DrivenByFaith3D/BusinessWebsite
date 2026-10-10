@@ -4,6 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { prisma } from '@/lib/prisma'
 import { redirect } from 'next/navigation'
+import { missingEtsyScopes } from '@/lib/etsy-scopes'
 import { getConnection } from '@/lib/etsy-oauth'
 import AdminProductsClient from './AdminProductsClient'
 
@@ -70,6 +71,7 @@ export default async function AdminProductsPage() {
       <AdminProductsClient
         initialProducts={productsWithStats}
         etsyConnected={!!etsyConnection}
+        etsyNeedsReconnect={!!etsyConnection && missingEtsyScopes(etsyConnection.scope).length > 0}
       />
     </div>
   )

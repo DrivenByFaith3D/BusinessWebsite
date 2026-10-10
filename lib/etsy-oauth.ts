@@ -8,7 +8,7 @@ const ETSY_API = 'https://openapi.etsy.com/v3/application'
 const REFRESH_BUFFER_MS = 5 * 60 * 1000
 
 // Both scopes: read receipts, and write shipment tracking back to Etsy.
-export const ETSY_SCOPES = 'transactions_r transactions_w listings_r shops_r'
+export { ETSY_SCOPES } from './etsy-scopes'
 
 export class EtsyNotConnectedError extends Error {
   constructor() {
