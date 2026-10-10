@@ -14,6 +14,7 @@ const require = createRequire(`${process.cwd()}/package.json`)
 require('next-auth/next').getServerSession = async () => null
 const resource = new Stripe('sk_test_isolated_placeholder').checkout.sessions
 const originalCreate = resource.constructor.prototype.create
+const originalList = resource.constructor.prototype.list
 const originalRetrieve = resource.constructor.prototype.retrieve
 const sessions = new Map<string, Stripe.Checkout.Session>()
 const idempotent = new Map<string, Stripe.Checkout.Session>()
@@ -48,6 +49,7 @@ resource.constructor.prototype.retrieve = async (id: string) => {
   if (!s) throw new Error('Unknown mock session')
   return s
 }
+resource.constructor.prototype.list = async () => ({ data: [...sessions.values()], has_more: false })
 const { prisma } = require('./lib/prisma') as typeof import('../lib/prisma')
 const { POST } =
   require('./app/api/stripe/product-checkout/route') as typeof import('../app/api/stripe/product-checkout/route')
@@ -83,6 +85,7 @@ before(async () => {
 after(async () => {
   resource.constructor.prototype.create = originalCreate
   resource.constructor.prototype.retrieve = originalRetrieve
+  resource.constructor.prototype.list = originalList
   await prisma.$disconnect()
 })
 
@@ -369,4 +372,34 @@ test('webhook validates signatures, commits a payment once and returns 500 on fa
   })
   assert.equal((await webhook(request(badPayload, badSignature))).status, 500)
   assert.equal(await prisma.stripeEvent.count({ where: { id: 'evt_signed_missing_order' } }), 0)
+})
+
+
+test('failed Stripe creation releases an orphan only after verified expiry', async () => {
+  const product = await prisma.product.create({ data: { name: 'Recovery print', price: 10, quantity: 1 } })
+  const create = resource.constructor.prototype.create
+  resource.constructor.prototype.create = async () => { throw new Stripe.errors.StripeConnectionError({ message: 'test outage' }) }
+  const failed = await checkout(product.id, null, 1)
+  resource.constructor.prototype.create = create
+  assert.equal(failed.status, 502)
+  const orphan = await prisma.shopOrder.findFirstOrThrow({ where: { items: { some: { productId: product.id } } } })
+  assert.equal((await checkout(product.id, null, 1)).status, 409)
+  await prisma.shopOrder.update({ where: { id: orphan.id }, data: { expiresAt: new Date(Date.now() - 10 * 60000) } })
+  assert.equal((await checkout(product.id, null, 1)).status, 200)
+  assert.equal((await prisma.shopOrder.findUniqueOrThrow({ where: { id: orphan.id } })).status, 'expired')
+})
+
+test('a paid Stripe session with an unsaved ID is recovered and never resold', async () => {
+  const product = await prisma.product.create({ data: { name: 'Paid recovery print', price: 10, quantity: 1 } })
+  assert.equal((await checkout(product.id, null, 1)).status, 200)
+  const order = await prisma.shopOrder.findFirstOrThrow({ where: { items: { some: { productId: product.id } } } })
+  const session = sessions.get(order.stripeSessionId!)!
+  session.payment_status = 'paid'
+  session.status = 'complete'
+  await prisma.shopOrder.update({ where: { id: order.id }, data: { stripeSessionId: null, expiresAt: new Date(Date.now() - 10 * 60000) } })
+  assert.equal((await checkout(product.id, null, 1)).status, 409)
+  const recovered = await prisma.shopOrder.findUniqueOrThrow({ where: { id: order.id } })
+  assert.equal(recovered.stripeSessionId, session.id)
+  assert.ok(recovered.paidAt)
+  assert.equal((await prisma.product.findUniqueOrThrow({ where: { id: product.id } })).quantity, 0)
 })

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { oauthHeaders, saveTokens, ETSY_SCOPES } from '@/lib/etsy-oauth'
+import { missingEtsyScopes } from '@/lib/etsy-scopes'
 import { resolveShopId, etsyShopName } from '@/lib/etsy'
 
 export const dynamic = 'force-dynamic'
@@ -25,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   // State is single-use: consume it so a replayed callback can't reuse the PKCE.
   const stored = await prisma.etsyOAuthState.findUnique({ where: { state } })
-  if (!stored) return back(req, { etsy: 'expired' })
+  if (!stored || stored.createdAt.getTime() < Date.now() - 15 * 60000) return back(req, { etsy: 'expired' })
   await prisma.etsyOAuthState.delete({ where: { state } }).catch(() => {})
 
   const keystring = process.env.ETSY_KEYSTRING?.trim()
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
       return back(req, { etsy: 'error' })
     }
 
-    const token = (await tokenRes.json()) as { access_token: string; refresh_token: string; expires_in: number }
+    const token = (await tokenRes.json()) as { access_token: string; refresh_token: string; expires_in: number; scope?: string }
     // Etsy access tokens are "{userId}.{token}".
     const userId = token.access_token.split('.')[0]
 
@@ -76,19 +77,30 @@ export async function GET(req: NextRequest) {
       console.error('[etsy:callback] shop lookup', shopsRes.status, shopsBody.slice(0, 200))
     }
 
-    // Fall back to the shop configured for the public sync. The token can still be
-    // stored; a mismatched account would surface as a 403 when reading receipts.
-    if (!shopId) {
-      try {
-        shopId = await resolveShopId(etsyShopName())
-        console.warn('[etsy:callback] used configured shop fallback', shopId)
-      } catch {
-        console.error('[etsy:callback] no shop from lookup or fallback; body:', shopsBody.slice(0, 200))
-        return back(req, { etsy: 'noshop' })
+    // Keep the working grant until the new account and private listing reads
+    // are verified. Connecting another Etsy account must not replace this shop.
+    const configuredShopId = await resolveShopId(etsyShopName())
+    if (!shopId || shopId !== configuredShopId) return back(req, { etsy: 'wrongshop' })
+    if (token.scope && missingEtsyScopes(token.scope).length)
+      return back(req, { etsy: 'permissions' })
+    const listingsRes = await fetch(
+      `https://openapi.etsy.com/v3/application/shops/${shopId}/listings/active?limit=1`,
+      { headers: oauthHeaders(token.access_token), cache: 'no-store' },
+    )
+    if (!listingsRes.ok) return back(req, { etsy: 'permissions' })
+    const listings = await listingsRes.json() as { results?: { listing_id: number }[] }
+    const listingId = listings.results?.[0]?.listing_id
+    if (listingId) {
+      for (const resource of ['inventory', 'shipping']) {
+        const probe = await fetch(
+          `https://openapi.etsy.com/v3/application/listings/batch/${resource}?listing_ids=${listingId}`,
+          { headers: oauthHeaders(token.access_token), cache: 'no-store' },
+        )
+        if (!probe.ok) return back(req, { etsy: 'permissions' })
       }
     }
 
-    await saveTokens(String(shopId), token.access_token, token.refresh_token, token.expires_in, ETSY_SCOPES)
+    await saveTokens(String(shopId), token.access_token, token.refresh_token, token.expires_in, token.scope || ETSY_SCOPES)
     return back(req, { etsy: 'connected' })
   } catch (e) {
     console.error('[etsy:callback] error', e instanceof Error ? e.message : e)

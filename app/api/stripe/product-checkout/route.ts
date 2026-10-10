@@ -8,6 +8,7 @@ import { serializable } from '@/lib/transactions'
 import { parseCheckoutLines, assertAvailable } from '@/lib/checkout-lines'
 import { applyCheckoutSession, notifyShopPurchase } from '@/lib/shop-payments'
 import { SHIPPING_COUNTRIES } from '@/lib/shipping-countries'
+import { findOrphanedSession } from '@/lib/checkout-recovery'
 import { paymentHealth } from '@/lib/integration-health'
 
 export async function POST(req: NextRequest) {
@@ -43,12 +44,29 @@ export async function POST(req: NextRequest) {
         OR: [{ expiresAt: { lte: new Date() } }, { expiresAt: null, stripeSessionId: { not: null } }],
         items: { some: { productId: { in: lines.map((l) => l.productId) } } },
       },
-      select: { stripeSessionId: true },
+      select: { id: true, stripeSessionId: true, createdAt: true, expiresAt: true },
     })
     await Promise.all(
       stale.map(async (order) => {
-        if (!order.stripeSessionId) return
-        const session = await stripe.checkout.sessions.retrieve(order.stripeSessionId)
+        let session: Stripe.Checkout.Session
+        if (order.stripeSessionId) {
+          session = await stripe.checkout.sessions.retrieve(order.stripeSessionId)
+        } else {
+          const recovered = await findOrphanedSession(stripe, order)
+          if (!recovered.checked) return
+          if (!recovered.session) {
+            await prisma.shopOrder.updateMany({
+              where: { id: order.id, status: 'pending', paidAt: null, stripeSessionId: null },
+              data: { status: 'expired' },
+            })
+            return
+          }
+          session = recovered.session
+          await prisma.shopOrder.updateMany({
+            where: { id: order.id, stripeSessionId: null },
+            data: { stripeSessionId: session.id },
+          })
+        }
         const changed = await applyCheckoutSession(session)
         if (changed)
           await notifyShopPurchase(changed).catch(() =>

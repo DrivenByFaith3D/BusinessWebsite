@@ -6,7 +6,9 @@ import Image from 'next/image'
 import Link from 'next/link'
 
 const CONNECT_MESSAGES: Record<string, { text: string; ok: boolean }> = {
-  connected: { text: 'Etsy connected. Your orders can now sync.', ok: true },
+  permissions: { text: 'Etsy did not grant the required permissions. Reconnect and approve access to listings and your shop.', ok: false },
+  wrongshop: { text: 'Please reconnect using the Etsy account that owns DrivenByFaith3D.', ok: false },
+  connected: { text: 'Etsy permissions verified. Sync products and orders below.', ok: true },
   denied: { text: 'Etsy connection was cancelled.', ok: false },
   expired: { text: 'That connection attempt expired. Please try again.', ok: false },
   noshop: { text: 'No Etsy shop was found for that account.', ok: false },
@@ -29,9 +31,11 @@ interface Product {
 export default function AdminProductsClient({
   initialProducts,
   etsyConnected,
+  etsyNeedsReconnect,
 }: {
   initialProducts: Product[]
   etsyConnected: boolean
+  etsyNeedsReconnect: boolean
 }) {
   const [syncing, setSyncing] = useState(false)
   const [syncMessage, setSyncMessage] = useState('')
@@ -82,13 +86,15 @@ export default function AdminProductsClient({
       {/* Etsy connection */}
       <div className="card p-4 mb-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2.5">
-          <span className={`w-2.5 h-2.5 rounded-full ${etsyConnected ? 'bg-green-500' : 'bg-taupe/50'}`} />
+          <span className={`w-2.5 h-2.5 rounded-full ${etsyConnected && !etsyNeedsReconnect ? 'bg-green-500' : 'bg-taupe/50'}`} />
           <div>
             <p className="text-sm font-medium text-charcoal">
-              {etsyConnected ? 'Etsy account connected' : 'Etsy account not connected'}
+              {etsyNeedsReconnect ? 'Etsy permissions need updating' : etsyConnected ? 'Etsy account connected' : 'Etsy account not connected'}
             </p>
             <p className="text-xs text-warm-gray">
-              {etsyConnected
+              {etsyNeedsReconnect
+                ? 'Reconnect and approve listing and shop access in Etsy. Saved options and photos stay protected during partial syncs.'
+                : etsyConnected
                 ? 'Your Etsy orders can sync in, and shipping labels can push tracking back.'
                 : 'Connect to sync your Etsy orders and push shipping tracking back to Etsy.'}
             </p>
@@ -98,7 +104,7 @@ export default function AdminProductsClient({
           href="/api/etsy/connect"
           className={`text-sm shrink-0 text-center ${etsyConnected ? 'btn-secondary' : 'btn-primary'}`}
         >
-          {etsyConnected ? 'Reconnect' : 'Connect Etsy'}
+          {etsyNeedsReconnect ? 'Approve Etsy permissions' : etsyConnected ? 'Reconnect' : 'Connect Etsy'}
         </a>
       </div>
 
